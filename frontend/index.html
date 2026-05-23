@@ -10,6 +10,10 @@
     <div id="app" class="app">
         <!-- 主界面 -->
         <div id="main-screen" class="screen active">
+            <!-- 背景装饰层 -->
+            <div class="clouds"></div>
+            <div class="mountains"></div>
+            
             <!-- 顶部状态栏 -->
             <header class="status-bar">
                 <div class="player-info" onclick="openCharacterPanel()">
@@ -18,7 +22,7 @@
                     </div>
                     <div class="player-details">
                         <div class="name">韩立</div>
-                        <div class="age">年龄: 300岁</div>
+                        <div class="age">修仙三百载</div>
                     </div>
                 </div>
                 <div class="activity-btn" onclick="toggleActivityPanel()">
@@ -66,10 +70,16 @@
                 <!-- 角色展示区 -->
                 <div class="character-display">
                     <div class="character-avatar">
-                        <div class="character-img">🧙‍♂️</div>
                         <div class="aura-ring aura-1"></div>
                         <div class="aura-ring aura-2"></div>
                         <div class="aura-ring aura-3"></div>
+                        <div class="particles">
+                            <div class="particle"></div>
+                            <div class="particle"></div>
+                            <div class="particle"></div>
+                            <div class="particle"></div>
+                        </div>
+                        <div class="character-img">🧙‍♂️</div>
                     </div>
                 </div>
 
@@ -79,7 +89,7 @@
                         <div class="progress-bar">
                             <div class="progress-fill" style="width: 75%;"></div>
                         </div>
-                        <div class="progress-text">修炼速度: 1500/分钟</div>
+                        <div class="progress-text">修炼速度：1500灵气/分钟</div>
                     </div>
                 </div>
 
@@ -103,12 +113,12 @@
                         <div class="mini-progress-fill" style="width: 75%;"></div>
                     </div>
                     <div class="section-title">📊 获取速度</div>
-                    <div class="speed-item">基础: +100/分</div>
-                    <div class="speed-item">聚灵阵: +50/分</div>
-                    <div class="speed-item">加成: +25/分</div>
-                    <div class="speed-item total">合计: +175/分</div>
+                    <div class="speed-item">基础修炼：+100/分</div>
+                    <div class="speed-item">聚灵阵法：+50/分</div>
+                    <div class="speed-item">丹药加成：+25/分</div>
+                    <div class="speed-item total">合计：+175/分</div>
                     <div class="section-title">⏱️ 预计完成</div>
-                    <div class="estimate">小境界升级: 14分钟</div>
+                    <div class="estimate">小境界升级：约14分钟</div>
                 </div>
             </div>
 
@@ -139,8 +149,8 @@
             <!-- 挑战面板 -->
             <div id="challenge-panel" class="challenge-panel">
                 <div class="panel-header">
-                    <span>⚔️ 挑战</span>
-                    <span class="recommend-power">推荐战力: 5000</span>
+                    <span>⚔️ 挑战副本</span>
+                    <span class="recommend-power">推荐战力：5000</span>
                 </div>
                 <div class="panel-content">
                     <div class="challenge-tabs">
@@ -151,21 +161,21 @@
                     <div class="challenge-list">
                         <div class="challenge-card" onclick="startBattle('story')">
                             <div class="card-title">🏔️ 青云山麓</div>
-                            <div class="card-info">今日 3/5 次</div>
-                            <div class="card-info">战力需求: 3000</div>
-                            <div class="card-info">推荐奖励: 灵石+装备</div>
+                            <div class="card-info">今日挑战：3/5 次</div>
+                            <div class="card-info">战力需求：3000</div>
+                            <div class="card-info">推荐奖励：灵石 + 装备</div>
                             <button class="enter-btn">进入挑战</button>
                         </div>
                         <div class="challenge-card">
                             <div class="card-title">👹 心魔幻境</div>
-                            <div class="card-info">解锁条件 ✓</div>
+                            <div class="card-info">解锁条件：已达成 ✓</div>
                             <div class="card-info">当前境界突破挑战</div>
-                            <div class="card-info">成功率: 50% (+10%)</div>
+                            <div class="card-info">成功率：50% (+10%)</div>
                             <button class="enter-btn">开始挑战</button>
                         </div>
                         <div class="challenge-card">
                             <div class="card-title">⚔️ 论道台</div>
-                            <div class="card-info">PVP竞技场</div>
+                            <div class="card-info">PVP 竞技场</div>
                             <div class="card-info">实时匹配对战</div>
                             <button class="enter-btn">匹配对手</button>
                         </div>
@@ -178,8 +188,8 @@
         <div id="battle-screen" class="screen">
             <!-- 战斗顶部 -->
             <header class="battle-header">
-                <div class="battle-title">青云山麓 - 第1关</div>
-                <div class="battle-round">回合: 1</div>
+                <div class="battle-title">青云山麓 - 第一关</div>
+                <div class="battle-round">回合：1</div>
             </header>
 
             <!-- 战斗区域 -->
@@ -250,8 +260,8 @@
 
             <!-- 战斗控制 -->
             <div class="battle-controls">
-                <button class="control-btn auto-btn">⚡ 自动</button>
-                <button class="control-btn speed-btn">⏩ 1x</button>
+                <button class="control-btn auto-btn">⚡ 自动战斗</button>
+                <button class="control-btn speed-btn">⏩ 1倍速</button>
                 <button class="control-btn skip-btn" onclick="exitBattle()">⏭️ 跳过</button>
             </div>
         </div>
@@ -259,10 +269,10 @@
         <!-- 战斗结果弹窗 -->
         <div id="battle-result" class="result-popup hidden">
             <div class="result-content">
-                <div class="result-title">🎉 战斗胜利！</div>
+                <div class="result-title">🎉 战斗胜利</div>
                 <div class="result-rewards">
                     <div class="reward-item">💎 灵石 +1000</div>
-                    <div class="reward-item">📦 炼器材料 x2</div>
+                    <div class="reward-item">📦 炼器材料 ×2</div>
                 </div>
                 <button class="confirm-btn" onclick="closeResult()">确认</button>
             </div>
