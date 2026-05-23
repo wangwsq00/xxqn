@@ -6,14 +6,16 @@
 
 ```
 /workspace/
-├── index.html          # 主HTML文件
-├── css/
-│   └── style.css       # 水墨仙侠风格CSS样式
-├── js/
-│   └── main.js         # 交互逻辑脚本
-└── doc/                # 设计文档目录
-    ├── 00_概要文档.md
-    └── modules/        # 各模块详细设计
+├── doc/                    # 设计文档目录
+│   ├── 00_概要文档.md
+│   └── modules/            # 各模块详细设计
+├── frontend/               # 前端代码目录
+│   ├── index.html          # 主HTML文件
+│   ├── css/
+│   │   └── style.css       # 水墨仙侠风格CSS样式
+│   └── js/
+│       └── main.js         # 交互逻辑脚本
+└── backend/                # 后端代码目录（待开发）
 ```
 
 ## 功能实现
@@ -44,7 +46,7 @@
 
 ## 使用方法
 
-1. 直接在浏览器中打开 `index.html`
+1. 直接在浏览器中打开 `frontend/index.html`
 2. 点击界面元素体验交互效果
 3. 点击"挑战"面板中的"青云山麓"进入战斗界面
 4. 战斗会自动进行并显示结果
