@@ -2,279 +2,294 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>修仙千年</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div id="app" class="app">
-        <!-- 主界面 -->
+        <!-- ==================== 主界面 ==================== -->
         <div id="main-screen" class="screen active">
-            <!-- 背景装饰层 -->
-            <div class="clouds"></div>
-            <div class="mountains"></div>
-            
+            <!-- 背景层 -->
+            <div class="bg-layer">
+                <div class="bg-img" style="background-image: url('assets/images/bg_main.jpg');"></div>
+                <div class="bg-vignette"></div>
+                <div class="bg-mist"></div>
+            </div>
+
             <!-- 顶部状态栏 -->
-            <header class="status-bar">
+            <header class="top-bar">
                 <div class="player-info" onclick="openCharacterPanel()">
-                    <div class="avatar">
-                        <div class="avatar-img">🧙</div>
+                    <div class="avatar-frame">
+                        <div class="avatar-img" style="background-image: url('assets/images/avatar_player.png');"></div>
                     </div>
-                    <div class="player-details">
-                        <div class="name">韩立</div>
-                        <div class="age">修仙三百载</div>
+                    <div class="player-text">
+                        <div class="player-name">韩立</div>
+                        <div class="player-realm">金丹境·初期</div>
                     </div>
                 </div>
-                <div class="activity-btn" onclick="toggleActivityPanel()">
-                    <span class="activity-icon">📜</span>
-                    <span class="activity-text">活动中心</span>
+                <div class="top-resources">
+                    <div class="res-item">
+                        <i class="res-icon res-stone"></i>
+                        <span class="res-val">12,580</span>
+                    </div>
+                    <div class="res-item">
+                        <i class="res-icon res-crystal"></i>
+                        <span class="res-val">368</span>
+                    </div>
+                </div>
+                <div class="activity-entry" onclick="toggleActivityPanel()">
+                    <i class="icon-activity"></i>
                 </div>
             </header>
 
             <!-- 活动面板 -->
-            <div id="activity-panel" class="activity-panel">
-                <div class="panel-header">
-                    <span>📜 活动中心</span>
-                </div>
-                <div class="panel-content">
-                    <div class="activity-item">
-                        <span class="activity-icon">🎁</span>
-                        <span class="activity-name">每日签到</span>
-                        <span class="activity-status completed">已签到</span>
+            <div id="activity-panel" class="overlay-panel">
+                <div class="panel-frame">
+                    <div class="panel-title-bar">
+                        <span class="panel-title">活动中心</span>
+                        <div class="panel-close" onclick="toggleActivityPanel()">✕</div>
                     </div>
-                    <div class="activity-item">
-                        <span class="activity-icon">🎊</span>
-                        <span class="activity-name">福利领取</span>
-                        <span class="activity-status">3项可领</span>
-                    </div>
-                    <div class="activity-item">
-                        <span class="activity-icon">⏰</span>
-                        <span class="activity-name">限时活动</span>
-                        <span class="activity-status ongoing">进行中</span>
-                    </div>
-                    <div class="activity-item">
-                        <span class="activity-icon">🎯</span>
-                        <span class="activity-name">七日目标</span>
-                        <span class="activity-status">第3天</span>
+                    <div class="panel-body">
+                        <div class="act-row"><span class="act-icon">🎁</span><span class="act-name">每日签到</span><span class="act-badge done">已签</span></div>
+                        <div class="act-row"><span class="act-icon">🎊</span><span class="act-name">福利领取</span><span class="act-badge hot">3项</span></div>
+                        <div class="act-row"><span class="act-icon">⏰</span><span class="act-name">限时活动</span><span class="act-badge live">进行中</span></div>
+                        <div class="act-row"><span class="act-icon">🎯</span><span class="act-name">七日目标</span><span class="act-badge">第3天</span></div>
                     </div>
                 </div>
             </div>
 
-            <!-- 中央内容区 -->
-            <main class="main-content">
-                <!-- 境界标签 -->
-                <div class="realm-badge">
-                    <div class="realm-name">金丹境·初期</div>
+            <!-- 中央角色区 -->
+            <main class="center-stage">
+                <div class="character-wrap">
+                    <div class="char-model" style="background-image: url('assets/images/char_main.png');"></div>
+                    <div class="aura-effect"></div>
+                    <div class="pet-model" style="background-image: url('assets/images/pet_fox.png');"></div>
                 </div>
-
-                <!-- 角色展示区 -->
-                <div class="character-display">
-                    <div class="character-avatar">
-                        <div class="aura-ring aura-1"></div>
-                        <div class="aura-ring aura-2"></div>
-                        <div class="aura-ring aura-3"></div>
-                        <div class="particles">
-                            <div class="particle"></div>
-                            <div class="particle"></div>
-                            <div class="particle"></div>
-                            <div class="particle"></div>
-                        </div>
-                        <div class="character-img">🧙‍♂️</div>
-                    </div>
-                </div>
-
-                <!-- 修炼进度 -->
-                <div class="cultivation-progress">
-                    <div class="progress-container">
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 75%;"></div>
-                        </div>
-                        <div class="progress-text">修炼速度：1500灵气/分钟</div>
-                    </div>
-                </div>
-
-                <!-- 突破按钮 (灵气满时显示) -->
-                <button id="breakthrough-btn" class="breakthrough-btn">
-                    🔥 突破境界
-                </button>
             </main>
 
-            <!-- 灵气球悬浮 -->
+            <!-- 修炼进度区 -->
+            <div class="cultivation-bar">
+                <div class="cult-progress-frame">
+                    <div class="cult-progress-track">
+                        <div class="cult-progress-fill" id="cult-fill" style="width:75%"></div>
+                    </div>
+                    <div class="cult-label">修炼速度：1,500 灵气/分钟</div>
+                </div>
+                <button class="btn-breakthrough" id="btn-breakthrough" onclick="showToast('突破功能开发中')">
+                    <span class="btn-breakthrough-text">突破境界</span>
+                </button>
+            </div>
+
+            <!-- 灵气浮球 -->
             <div class="spirit-orb" onclick="toggleSpiritPanel()">
-                <div class="orb-text">75%</div>
+                <svg viewBox="0 0 80 80" class="orb-svg">
+                    <defs>
+                        <radialGradient id="orbGrad" cx="35%" cy="35%">
+                            <stop offset="0%" stop-color="#7FDBCA" stop-opacity="0.9"/>
+                            <stop offset="60%" stop-color="#5BA4A4" stop-opacity="0.6"/>
+                            <stop offset="100%" stop-color="#5BA4A4" stop-opacity="0.2"/>
+                        </radialGradient>
+                    </defs>
+                    <circle cx="40" cy="40" r="36" fill="url(#orbGrad)" stroke="#7FDBCA" stroke-width="2"/>
+                </svg>
+                <span class="orb-pct">75%</span>
             </div>
 
             <!-- 灵气详情面板 -->
-            <div id="spirit-panel" class="spirit-panel">
-                <div class="panel-header">💫 当前灵气</div>
-                <div class="panel-content">
-                    <div class="spirit-value">7,500 / 10,000</div>
-                    <div class="mini-progress">
-                        <div class="mini-progress-fill" style="width: 75%;"></div>
+            <div id="spirit-panel" class="overlay-panel">
+                <div class="panel-frame">
+                    <div class="panel-title-bar">
+                        <span class="panel-title">灵气详情</span>
+                        <div class="panel-close" onclick="toggleSpiritPanel()">✕</div>
                     </div>
-                    <div class="section-title">📊 获取速度</div>
-                    <div class="speed-item">基础修炼：+100/分</div>
-                    <div class="speed-item">聚灵阵法：+50/分</div>
-                    <div class="speed-item">丹药加成：+25/分</div>
-                    <div class="speed-item total">合计：+175/分</div>
-                    <div class="section-title">⏱️ 预计完成</div>
-                    <div class="estimate">小境界升级：约14分钟</div>
+                    <div class="panel-body">
+                        <div class="spirit-main-val">7,500 / 10,000</div>
+                        <div class="spirit-bar-mini">
+                            <div class="spirit-bar-fill" style="width:75%"></div>
+                        </div>
+                        <div class="spirit-section-title">获取速度</div>
+                        <div class="spirit-row"><span>基础修炼</span><span class="spirit-val">+100/分</span></div>
+                        <div class="spirit-row"><span>聚灵阵法</span><span class="spirit-val">+50/分</span></div>
+                        <div class="spirit-row"><span>丹药加成</span><span class="spirit-val">+25/分</span></div>
+                        <div class="spirit-row total"><span>合计</span><span class="spirit-val">+175/分</span></div>
+                        <div class="spirit-section-title">预计完成</div>
+                        <div class="spirit-eta">小境界升级：约14分钟</div>
+                    </div>
                 </div>
             </div>
 
             <!-- 底部导航栏 -->
             <nav class="bottom-nav">
                 <div class="nav-item" onclick="switchTab('storage')">
-                    <span class="nav-icon">🎒</span>
-                    <span class="nav-text">储物</span>
+                    <svg class="nav-icon-svg" viewBox="0 0 40 40"><rect x="8" y="14" width="24" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 14 L14 8 H26 L32 14" fill="none" stroke="currentColor" stroke-width="2"/><line x1="16" y1="20" x2="24" y2="20" stroke="currentColor" stroke-width="2"/></svg>
+                    <span class="nav-label">储物</span>
                 </div>
                 <div class="nav-item" onclick="switchTab('cultivation')">
-                    <span class="nav-icon">📜</span>
-                    <span class="nav-text">功法</span>
+                    <svg class="nav-icon-svg" viewBox="0 0 40 40"><path d="M20 6 L20 34 M14 12 Q20 6 26 12 M12 20 Q20 14 28 20 M14 28 Q20 22 26 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    <span class="nav-label">功法</span>
                 </div>
                 <div class="nav-item active" onclick="openChallengePanel()">
-                    <span class="nav-icon">⚔️</span>
-                    <span class="nav-text">挑战</span>
+                    <svg class="nav-icon-svg" viewBox="0 0 40 40"><path d="M20 6 L24 16 L34 18 L27 25 L29 36 L20 31 L11 36 L13 25 L6 18 L16 16 Z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                    <span class="nav-label">挑战</span>
                 </div>
                 <div class="nav-item" onclick="switchTab('social')">
-                    <span class="nav-icon">🤝</span>
-                    <span class="nav-text">仙缘</span>
+                    <svg class="nav-icon-svg" viewBox="0 0 40 40"><circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="28" cy="16" r="5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 32 Q6 24 16 24 Q20 24 22 26" fill="none" stroke="currentColor" stroke-width="2"/><path d="M34 30 Q34 24 28 24 Q25 24 23 25" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                    <span class="nav-label">仙缘</span>
                 </div>
                 <div class="nav-item" onclick="switchTab('shop')">
-                    <span class="nav-icon">💰</span>
-                    <span class="nav-text">商行</span>
+                    <svg class="nav-icon-svg" viewBox="0 0 40 40"><circle cx="20" cy="18" r="10" fill="none" stroke="currentColor" stroke-width="2"/><text x="20" y="22" text-anchor="middle" fill="currentColor" font-size="12" font-weight="bold">¥</text><path d="M16 28 L16 34 M24 28 L24 34 M12 34 L28 34" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                    <span class="nav-label">商行</span>
                 </div>
             </nav>
 
-            <!-- 挑战面板 -->
-            <div id="challenge-panel" class="challenge-panel">
-                <div class="panel-header">
-                    <span>⚔️ 挑战副本</span>
-                    <span class="recommend-power">推荐战力：5000</span>
+            <!-- 挑战面板（全屏覆盖） -->
+            <div id="challenge-panel" class="full-panel">
+                <div class="full-panel-header">
+                    <div class="full-panel-title">挑战副本</div>
+                    <div class="full-panel-close" onclick="openChallengePanel()">✕</div>
                 </div>
-                <div class="panel-content">
-                    <div class="challenge-tabs">
-                        <div class="tab active">剧情副本</div>
-                        <div class="tab">日常副本</div>
-                        <div class="tab">精英副本</div>
+                <div class="tab-bar">
+                    <div class="tab-item active" data-tab="story">剧情副本</div>
+                    <div class="tab-item" data-tab="daily">日常副本</div>
+                    <div class="tab-item" data-tab="elite">精英副本</div>
+                </div>
+                <div class="dungeon-list">
+                    <div class="dungeon-card" onclick="startBattle('story')">
+                        <div class="dungeon-thumb" style="background-image: url('assets/images/dungeon_qingyun.jpg');"></div>
+                        <div class="dungeon-info">
+                            <div class="dungeon-name">青云山麓</div>
+                            <div class="dungeon-meta">战力需求：3,000</div>
+                            <div class="dungeon-meta">今日：3/5 次</div>
+                            <div class="dungeon-reward">奖励：灵石 + 装备</div>
+                        </div>
+                        <button class="btn-enter">进入</button>
                     </div>
-                    <div class="challenge-list">
-                        <div class="challenge-card" onclick="startBattle('story')">
-                            <div class="card-title">🏔️ 青云山麓</div>
-                            <div class="card-info">今日挑战：3/5 次</div>
-                            <div class="card-info">战力需求：3000</div>
-                            <div class="card-info">推荐奖励：灵石 + 装备</div>
-                            <button class="enter-btn">进入挑战</button>
+                    <div class="dungeon-card">
+                        <div class="dungeon-thumb" style="background-image: url('assets/images/dungeon_xinmo.jpg');"></div>
+                        <div class="dungeon-info">
+                            <div class="dungeon-name">心魔幻境</div>
+                            <div class="dungeon-meta">境界突破挑战</div>
+                            <div class="dungeon-meta">成功率：50% (+10%)</div>
                         </div>
-                        <div class="challenge-card">
-                            <div class="card-title">👹 心魔幻境</div>
-                            <div class="card-info">解锁条件：已达成 ✓</div>
-                            <div class="card-info">当前境界突破挑战</div>
-                            <div class="card-info">成功率：50% (+10%)</div>
-                            <button class="enter-btn">开始挑战</button>
+                        <button class="btn-enter btn-danger">挑战</button>
+                    </div>
+                    <div class="dungeon-card">
+                        <div class="dungeon-thumb" style="background-image: url('assets/images/dungeon_pvp.jpg');"></div>
+                        <div class="dungeon-info">
+                            <div class="dungeon-name">论道台</div>
+                            <div class="dungeon-meta">PVP 竞技场</div>
+                            <div class="dungeon-meta">实时匹配对战</div>
                         </div>
-                        <div class="challenge-card">
-                            <div class="card-title">⚔️ 论道台</div>
-                            <div class="card-info">PVP 竞技场</div>
-                            <div class="card-info">实时匹配对战</div>
-                            <button class="enter-btn">匹配对手</button>
-                        </div>
+                        <button class="btn-enter btn-gold">匹配</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 战斗界面 -->
+        <!-- ==================== 战斗界面 ==================== -->
         <div id="battle-screen" class="screen">
-            <!-- 战斗顶部 -->
-            <header class="battle-header">
-                <div class="battle-title">青云山麓 - 第一关</div>
-                <div class="battle-round">回合：1</div>
+            <!-- 战斗背景 -->
+            <div class="bg-layer">
+                <div class="bg-img" style="background-image: url('assets/images/bg_battle.jpg');"></div>
+                <div class="bg-vignette"></div>
+            </div>
+
+            <!-- 战斗顶栏 -->
+            <header class="battle-top">
+                <div class="battle-stage-name">青云山麓 · 第一关</div>
+                <div class="battle-round-counter">回合 <span id="round-num">1</span></div>
             </header>
 
             <!-- 战斗区域 -->
-            <main class="battle-area">
-                <!-- 敌方阵容 (上) -->
-                <div class="enemy-team">
-                    <div class="battle-slot enemy-slot slot-4">
-                        <div class="unit-avatar">👹</div>
-                        <div class="unit-hp-bar">
-                            <div class="hp-fill" style="width: 100%;"></div>
+            <main class="battle-field">
+                <!-- 敌方 -->
+                <div class="field-side field-enemy">
+                    <div class="unit-card enemy-unit" data-slot="1">
+                        <div class="unit-portrait" style="background-image: url('assets/images/enemy_boss.png');"></div>
+                        <div class="unit-hp-wrap">
+                            <div class="unit-hp-bar"><div class="unit-hp-fill enemy-hp" style="width:100%"></div></div>
+                            <span class="unit-hp-num">5000/5000</span>
                         </div>
-                        <div class="unit-name">妖兵</div>
-                        <div class="unit-hp-text">1000/1000</div>
+                        <div class="unit-label">妖王</div>
                     </div>
-                    <div class="battle-slot enemy-slot slot-2">
-                        <div class="unit-avatar">👺</div>
-                        <div class="unit-hp-bar">
-                            <div class="hp-fill" style="width: 100%;"></div>
+                    <div class="unit-card enemy-unit" data-slot="2">
+                        <div class="unit-portrait" style="background-image: url('assets/images/enemy_general.png');"></div>
+                        <div class="unit-hp-wrap">
+                            <div class="unit-hp-bar"><div class="unit-hp-fill enemy-hp" style="width:100%"></div></div>
+                            <span class="unit-hp-num">2000/2000</span>
                         </div>
-                        <div class="unit-name">妖将</div>
-                        <div class="unit-hp-text">2000/2000</div>
+                        <div class="unit-label">妖将</div>
                     </div>
-                    <div class="battle-slot enemy-slot slot-1">
-                        <div class="unit-avatar">👿</div>
-                        <div class="unit-hp-bar">
-                            <div class="hp-fill" style="width: 100%;"></div>
+                    <div class="unit-card enemy-unit" data-slot="4">
+                        <div class="unit-portrait" style="background-image: url('assets/images/enemy_soldier.png');"></div>
+                        <div class="unit-hp-wrap">
+                            <div class="unit-hp-bar"><div class="unit-hp-fill enemy-hp" style="width:100%"></div></div>
+                            <span class="unit-hp-num">1000/1000</span>
                         </div>
-                        <div class="unit-name">妖王</div>
-                        <div class="unit-hp-text">5000/5000</div>
+                        <div class="unit-label">妖兵</div>
                     </div>
                 </div>
 
                 <!-- 行动条 -->
-                <div class="action-bar">
-                    <div class="bar-track">
-                        <div class="action-token token-enemy" style="left: 20%;">👿</div>
-                        <div class="action-token token-player" style="left: 60%;">🧙‍♂️</div>
+                <div class="action-bar-wrap">
+                    <div class="action-bar-track">
+                        <div class="action-bar-line"></div>
+                        <div class="action-bar-token token-ally" style="left:60%">🧙</div>
+                        <div class="action-bar-token token-foe" style="left:25%">👿</div>
+                        <div class="action-bar-token token-ally" style="left:80%">🦊</div>
                     </div>
                 </div>
 
-                <!-- 我方阵容 (下) -->
-                <div class="player-team">
-                    <div class="battle-slot player-slot slot-1">
-                        <div class="unit-avatar">🧙‍♂️</div>
-                        <div class="unit-hp-bar">
-                            <div class="hp-fill" style="width: 100%;"></div>
+                <!-- 我方 -->
+                <div class="field-side field-ally">
+                    <div class="unit-card ally-unit" data-slot="1">
+                        <div class="unit-portrait" style="background-image: url('assets/images/char_battle.png');"></div>
+                        <div class="unit-hp-wrap">
+                            <div class="unit-hp-bar"><div class="unit-hp-fill ally-hp" style="width:100%"></div></div>
+                            <span class="unit-hp-num">8000/8000</span>
                         </div>
-                        <div class="unit-name">韩立</div>
-                        <div class="unit-hp-text">8000/8000</div>
+                        <div class="unit-label">韩立</div>
                     </div>
-                    <div class="battle-slot player-slot slot-2">
-                        <div class="unit-avatar">🦊</div>
-                        <div class="unit-hp-bar">
-                            <div class="hp-fill" style="width: 100%;"></div>
+                    <div class="unit-card ally-unit" data-slot="2">
+                        <div class="unit-portrait" style="background-image: url('assets/images/pet_battle_fox.png');"></div>
+                        <div class="unit-hp-wrap">
+                            <div class="unit-hp-bar"><div class="unit-hp-fill ally-hp" style="width:100%"></div></div>
+                            <span class="unit-hp-num">3000/3000</span>
                         </div>
-                        <div class="unit-name">灵狐</div>
-                        <div class="unit-hp-text">3000/3000</div>
+                        <div class="unit-label">灵狐</div>
                     </div>
-                    <div class="battle-slot player-slot slot-3 empty">
+                    <div class="unit-card ally-unit empty-slot" data-slot="3">
+                        <div class="unit-portrait empty-portrait"></div>
+                        <div class="unit-label">未解锁</div>
                     </div>
                 </div>
             </main>
 
             <!-- 战斗日志 -->
-            <div class="battle-log">
-                <div class="log-item">战斗开始！</div>
+            <div class="battle-log-wrap">
+                <div class="battle-log" id="battle-log">
+                    <div class="log-entry">战斗开始！</div>
+                </div>
             </div>
 
             <!-- 战斗控制 -->
-            <div class="battle-controls">
-                <button class="control-btn auto-btn">⚡ 自动战斗</button>
-                <button class="control-btn speed-btn">⏩ 1倍速</button>
-                <button class="control-btn skip-btn" onclick="exitBattle()">⏭️ 跳过</button>
+            <div class="battle-ctrl">
+                <button class="ctrl-btn" id="btn-auto">自动</button>
+                <button class="ctrl-btn" id="btn-speed">1x</button>
+                <button class="ctrl-btn" onclick="exitBattle()">退出</button>
             </div>
         </div>
 
-        <!-- 战斗结果弹窗 -->
-        <div id="battle-result" class="result-popup hidden">
-            <div class="result-content">
-                <div class="result-title">🎉 战斗胜利</div>
-                <div class="result-rewards">
-                    <div class="reward-item">💎 灵石 +1000</div>
-                    <div class="reward-item">📦 炼器材料 ×2</div>
+        <!-- ==================== 战斗结果弹窗 ==================== -->
+        <div id="battle-result" class="result-overlay hidden">
+            <div class="result-card">
+                <div class="result-banner">战斗胜利</div>
+                <div class="result-loot">
+                    <div class="loot-item"><span class="loot-icon" style="background-image:url('assets/images/icon_stone.png');"></span>灵石 +1,000</div>
+                    <div class="loot-item"><span class="loot-icon" style="background-image:url('assets/images/icon_material.png');"></span>炼器材料 ×2</div>
                 </div>
-                <button class="confirm-btn" onclick="closeResult()">确认</button>
+                <button class="btn-confirm" onclick="closeResult()">确认</button>
             </div>
         </div>
     </div>
