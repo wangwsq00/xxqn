@@ -39,4 +39,18 @@ describe("createTrialEncounter realm stats", () => {
     expect(hero?.stats.atk).toBe(150);
     expect(hero?.skills[0]?.def.name).toBe("七星剑阵");
   });
+
+  it("uses stronger named enemies on later stages", () => {
+    const stage1 = createTrialEncounter().filter((unit) => unit.side === "enemy");
+    const stage2 = createTrialEncounter({}, 1, [], 2).filter((unit) => unit.side === "enemy");
+    const stage3 = createTrialEncounter({}, 1, [], 3).filter((unit) => unit.side === "enemy");
+    expect(stage1.map((unit) => unit.name)).toEqual(["野修甲", "野修乙"]);
+    expect(stage2.map((unit) => unit.name)).toEqual(["邪修甲", "邪修乙"]);
+    expect(stage3.map((unit) => unit.name)).toEqual(["魔修甲", "魔修乙"]);
+    expect(stage1[0]?.stats.hp).toBe(180);
+    expect(stage2[0]?.stats.hp).toBeGreaterThan(stage1[0]!.stats.hp);
+    expect(stage3[0]?.stats.hp).toBeGreaterThan(stage2[0]!.stats.hp);
+    expect(stage2[0]?.stats.atk).toBeGreaterThan(stage1[0]!.stats.atk);
+    expect(stage3[0]?.stats.atk).toBeGreaterThan(stage2[0]!.stats.atk);
+  });
 });

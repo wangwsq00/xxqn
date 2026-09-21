@@ -39,8 +39,11 @@ describe("trial victory rewards", () => {
     expect(first.save.player.gatheringArrayLevel).toBe(0);
     expect(first.save.idle).toEqual(save.idle);
     expect(first.save.gongfa).toEqual(save.gongfa);
+    expect(first.save.trial.highestCleared).toBe(1);
+    expect(first.loot.unlockedNext).toBe(true);
     expect(first.lines[0]).toBe(`获得 灵石 ${TRIAL_VICTORY_STONES}`);
     expect(first.lines[1]).toBe(`现有灵石 ${STARTER_STONES + TRIAL_VICTORY_STONES}`);
+    expect(first.lines).toContain("已解锁 第2关 邪修试炼");
 
     const second = applyTrialVictoryRewards(first.save);
     expect(second.save.player.stones).toBe(STARTER_STONES + TRIAL_VICTORY_STONES * 2);
@@ -74,5 +77,27 @@ describe("trial victory rewards", () => {
     expect(loaded.player.stones).toBe(STARTER_STONES + TRIAL_VICTORY_STONES);
     const stored = JSON.parse(storage.getItem(SAVE_KEY) ?? "{}");
     expect(stored.player.stones).toBe(STARTER_STONES + TRIAL_VICTORY_STONES);
+    expect(stored.trial.highestCleared).toBe(1);
+  });
+
+  it("scales stones by stage and refuses a locked later stage", () => {
+    const save = defaultSave(6_000);
+    const locked = applyTrialVictoryRewards(save, 2);
+    expect(locked.loot.stones).toBe(0);
+    expect(locked.save.trial.highestCleared).toBe(0);
+    expect(locked.save.player.stones).toBe(STARTER_STONES);
+
+    const one = applyTrialVictoryRewards(save, 1);
+    const two = applyTrialVictoryRewards(one.save, 2);
+    expect(two.loot.stones).toBe(60);
+    expect(two.save.trial.highestCleared).toBe(2);
+    expect(two.lines).toContain("已解锁 第3关 魔修试炼");
+
+    const three = applyTrialVictoryRewards(two.save, 3);
+    expect(three.loot.stones).toBe(70);
+    expect(three.save.trial.highestCleared).toBe(3);
+    expect(three.lines).toContain("三关试炼均已通关");
+    expect(three.save.player.gatheringArrayLevel).toBe(0);
+    expect(three.save.gongfa).toEqual(save.gongfa);
   });
 });

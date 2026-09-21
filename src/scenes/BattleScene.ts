@@ -13,6 +13,8 @@ import { combatSkillsFromGongfa } from "../gongfa/state";
 import { applyHeartDemonDefeat, applyHeartDemonVictory } from "../realm/breakthrough";
 import { realmLabel } from "../realm/label";
 import { loadSave, persistSave, type SaveData } from "../save/storage";
+import { getTrialStage } from "../trial/catalog";
+import { isTrialStageUnlocked } from "../trial/state";
 import { COLORS, FONT } from "../ui/theme";
 
 interface SlotView {
@@ -37,6 +39,7 @@ export class BattleScene extends Phaser.Scene {
   private save!: SaveData;
   private engine!: BattleEngine;
   private mode: BattleMode = "trial";
+  private stageId = 1;
   private views = new Map<string, SlotView>();
   private slotViews: SlotView[] = [];
   private logText?: Phaser.GameObjects.Text;
@@ -49,19 +52,27 @@ export class BattleScene extends Phaser.Scene {
     super("Battle");
   }
 
-  init(data?: { mode?: BattleMode }): void {
+  init(data?: { mode?: BattleMode; stageId?: number }): void {
     this.mode = data?.mode === "heartDemon" ? "heartDemon" : "trial";
+    this.stageId = data?.stageId ?? 1;
   }
 
   create(): void {
     this.save = loadSave();
+    if (
+      this.mode === "trial" &&
+      !isTrialStageUnlocked(this.save.trial.highestCleared, this.stageId)
+    ) {
+      this.scene.start("TrialSelect");
+      return;
+    }
     const gear = gearBonusFromEquipment(this.save.equipment);
     const realmMajor = this.save.player.realmMajor;
     const skills = combatSkillsFromGongfa(this.save.gongfa);
     this.engine = new BattleEngine(
       this.mode === "heartDemon"
         ? createHeartDemonEncounter(gear, realmMajor, skills)
-        : createTrialEncounter(gear, realmMajor, skills),
+        : createTrialEncounter(gear, realmMajor, skills, this.stageId),
     );
     this.views.clear();
     this.slotViews = [];
@@ -72,7 +83,9 @@ export class BattleScene extends Phaser.Scene {
     const { width } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
-    const title = this.mode === "heartDemon" ? "心魔挑战" : "试炼战斗";
+    const trialStage = getTrialStage(this.stageId);
+    const title =
+      this.mode === "heartDemon" ? "心魔挑战" : `试炼 · 第${trialStage.id}关 ${trialStage.name}`;
     this.add
       .text(width / 2, 48, title, {
         fontFamily: FONT,
@@ -89,7 +102,7 @@ export class BattleScene extends Phaser.Scene {
         ? `功法 ${hero.skills.map((skill) => skill.def.name).join("、")}`
         : "未装备功法（普攻）";
     const modeHint =
-      this.mode === "heartDemon" ? "战胜即可破境" : "胜利奖励灵石";
+      this.mode === "heartDemon" ? "战胜即可破境" : `胜利 ${trialStage.stones} 灵石`;
     this.add
       .text(width / 2, 90, `行动条 · ${atkHint} · ${skillHint} · ${modeHint}`, {
         fontFamily: FONT,
@@ -141,13 +154,15 @@ export class BattleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.makeButton(width / 2, 1168, "返回洞府", () => this.scene.start("Hub"));
+    this.makeButton(width / 2, 1168, this.mode === "trial" ? "返回试炼" : "返回洞府", () =>
+      this.leaveBattle(),
+    );
     this.refreshViews();
     this.refreshLog();
   }
 
   update(_time: number, delta: number): void {
-    if (this.ended || this.animating) {
+    if (!this.engine || this.ended || this.animating) {
       return;
     }
     this.tickCarry += delta;
@@ -351,7 +366,7 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.add.container(0, 0, [dim, banner, sub]);
     dim.setInteractive();
-    dim.on("pointerdown", () => this.scene.start("Hub"));
+    dim.on("pointerdown", () => this.leaveBattle());
     this.statusText?.setText(statusLine);
   }
 
@@ -386,20 +401,24 @@ export class BattleScene extends Phaser.Scene {
       };
     }
 
-    let lootLine = "无奖励\n点击任意处返回洞府";
+    let lootLine = "无奖励\n点击任意处返回试炼";
     let gainedStones = 0;
     if (win) {
-      const result = applyTrialVictoryRewards(this.save);
+      const result = applyTrialVictoryRewards(this.save, this.stageId);
       this.save = result.save;
       persistSave(this.save);
-      lootLine = formatVictoryRewardText(result.lines);
+      lootLine = formatVictoryRewardText(result.lines, "点击任意处返回试炼");
       gainedStones = result.loot.stones;
     }
     return {
       bannerText: win ? "战斗胜利" : "战斗失败",
       lootLine,
-      statusLine: win ? `试炼完成 · 灵石 +${gainedStones}` : "再修炼一番吧",
+      statusLine: win ? `第${this.stageId}关完成 · 灵石 +${gainedStones}` : "再修炼一番吧",
     };
+  }
+
+  private leaveBattle(): void {
+    this.scene.start(this.mode === "trial" ? "TrialSelect" : "Hub");
   }
 
   private makeButton(x: number, y: number, label: string, onClick: () => void): void {

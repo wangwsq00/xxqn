@@ -4,6 +4,7 @@ import { starterEquipment } from "../equip/state";
 import { QIXING_JIANZHEN_ID, TIANGANG_HUTI_ID } from "../gongfa/catalog";
 import { starterGongfa } from "../gongfa/state";
 import { STARTER_STONES } from "../idle/constants";
+import { starterTrial } from "../trial/state";
 import { defaultSave, loadSave, migrateSave, persistSave, SAVE_KEY } from "./storage";
 
 function memoryStorage() {
@@ -46,6 +47,7 @@ describe("save migrate and load", () => {
     expect(migrated?.equipment.equipped.weapon).toBeUndefined();
     expect(migrated?.gongfa.owned).toEqual([QIXING_JIANZHEN_ID, TIANGANG_HUTI_ID]);
     expect(migrated?.gongfa.slots).toEqual([null, null, null, null]);
+    expect(migrated?.trial.highestCleared).toBe(0);
   });
 
   it("accrues offline pending into LocalStorage on load", () => {
@@ -70,6 +72,7 @@ describe("save migrate and load", () => {
         },
         equipment: starterEquipment(),
         gongfa: starterGongfa(),
+        trial: starterTrial(),
       },
       0,
     );
@@ -105,6 +108,7 @@ describe("save migrate and load", () => {
         },
         equipment: starterEquipment(),
         gongfa: starterGongfa(),
+        trial: starterTrial(),
       },
       50,
     );
@@ -138,6 +142,7 @@ describe("save migrate and load", () => {
         },
         equipment: starterEquipment(),
         gongfa: starterGongfa(),
+        trial: starterTrial(),
       },
       80,
     );
@@ -145,5 +150,21 @@ describe("save migrate and load", () => {
     expect(loaded.player.realmMajor).toBe(1);
     expect(loaded.player.realmLayer).toBe(9);
     expect(loaded.player.lingqi).toBe(500);
+  });
+
+  it("keeps highest cleared trial stage across load", () => {
+    const storage = memoryStorage();
+    vi.stubGlobal("localStorage", storage);
+    persistSave(
+      {
+        ...defaultSave(90),
+        trial: { highestCleared: 2 },
+      },
+      90,
+    );
+    const loaded = loadSave(90);
+    expect(loaded.trial.highestCleared).toBe(2);
+    const stored = JSON.parse(storage.getItem(SAVE_KEY) ?? "{}");
+    expect(stored.trial.highestCleared).toBe(2);
   });
 });

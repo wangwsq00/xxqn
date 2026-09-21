@@ -1,8 +1,10 @@
 import type { SaveGongfa } from "../gongfa/types";
 import type { SaveEquipment } from "../equip/types";
+import type { SaveTrial } from "../trial/types";
 
 export type { SaveEquipment } from "../equip/types";
 export type { SaveGongfa } from "../gongfa/types";
+export type { SaveTrial } from "../trial/types";
 
 export interface SavePlayer {
   realmMajor: number;
@@ -29,4 +31,5 @@ export interface SaveData {
   idle: SaveIdle;
   equipment: SaveEquipment;
   gongfa: SaveGongfa;
+  trial: SaveTrial;
 }

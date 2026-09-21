@@ -2,55 +2,41 @@ import { makeCombatant, makeHero, realmBaseStat } from "../combat/factory";
 import type { Combatant, EquippedSkill } from "../combat/types";
 import { EMPTY_GEAR } from "../equip/catalog";
 import type { GearBonus } from "../equip/types";
+import { getTrialStage } from "../trial/catalog";
 
 export type BattleMode = "trial" | "heartDemon";
 
-/** M1 试炼：主角居中，对位 2 名敌人（1 号、2 号）。功法由存档槽位传入，未装备则只普攻。 */
+/** M1 试炼：主角居中，对位该关敌人。功法由存档槽位传入，未装备则只普攻。 */
 export function createTrialEncounter(
   gear: Partial<GearBonus> = EMPTY_GEAR,
   realmMajor = 1,
   skills: EquippedSkill[] = [],
+  stageId = 1,
 ): Combatant[] {
   const hero = makeHero(skills, gear, realmMajor);
-  const gruntA = makeCombatant({
-    id: "enemy-1",
-    name: "野修甲",
-    side: "enemy",
-    slot: 1,
-    stats: {
-      hp: 180,
-      maxHp: 180,
-      atk: 95,
-      def: 25,
-      spd: 42,
-      hit: 80,
-      dodge: 5,
-      crit: 8,
-      critResist: 0,
-      block: 5,
-      blockResist: 0,
-    },
-  });
-  const gruntB = makeCombatant({
-    id: "enemy-2",
-    name: "野修乙",
-    side: "enemy",
-    slot: 2,
-    stats: {
-      hp: 150,
-      maxHp: 150,
-      atk: 88,
-      def: 20,
-      spd: 48,
-      hit: 78,
-      dodge: 8,
-      crit: 12,
-      critResist: 0,
-      block: 0,
-      blockResist: 0,
-    },
-  });
-  return [hero, gruntA, gruntB];
+  const stage = getTrialStage(stageId);
+  const enemies = stage.enemies.map((enemy, index) =>
+    makeCombatant({
+      id: `enemy-${index + 1}`,
+      name: enemy.name,
+      side: "enemy",
+      slot: enemy.slot,
+      stats: {
+        hp: enemy.hp,
+        maxHp: enemy.hp,
+        atk: enemy.atk,
+        def: enemy.def,
+        spd: enemy.spd,
+        hit: enemy.hit,
+        dodge: enemy.dodge,
+        crit: enemy.crit,
+        critResist: enemy.critResist,
+        block: enemy.block,
+        blockResist: enemy.blockResist,
+      },
+    }),
+  );
+  return [hero, ...enemies];
 }
 
 /**

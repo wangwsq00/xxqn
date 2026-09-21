@@ -14,6 +14,7 @@ import { cultivationProgressText, cultivationRatio } from "../realm/format";
 import { applyMinorLayerUps } from "../realm/upgrade";
 import { canChallengeHeartDemon, heartDemonHint } from "../realm/breakthrough";
 import { loadSave, persistSave, realmLabel, type SaveData } from "../save/storage";
+import { hubTrialSummary } from "../trial/state";
 import { COLORS, FONT } from "../ui/theme";
 
 const QI_BAR_W = 360;
@@ -33,6 +34,7 @@ export class HubScene extends Phaser.Scene {
   private claimLabel?: Phaser.GameObjects.Text;
   private demonBg?: Phaser.GameObjects.Rectangle;
   private demonLabel?: Phaser.GameObjects.Text;
+  private trialProgress?: Phaser.GameObjects.Text;
   private onVisibility?: () => void;
 
   constructor() {
@@ -156,9 +158,22 @@ export class HubScene extends Phaser.Scene {
       this.scene.start("Gongfa");
     }, 200);
     this.makeButton(width / 2 - 190, 750, "进入试炼", () => {
-      this.persistThenBattle("trial");
+      const { save } = accrueIdle(this.save);
+      this.save = save;
+      persistSave(this.save);
+      this.scene.start("TrialSelect");
     }, 280);
     this.makeDemonButton(width / 2 + 190, 750);
+
+    this.trialProgress = this.add
+      .text(width / 2, 860, "", {
+        fontFamily: FONT,
+        fontSize: "16px",
+        color: COLORS.log,
+        align: "center",
+        lineSpacing: 8,
+      })
+      .setOrigin(0.5);
 
     this.add
       .text(width / 2, height - 72, "阵容：主角固定我方 1 号中位 · 5v5 空位可空", {
@@ -229,6 +244,7 @@ export class HubScene extends Phaser.Scene {
     this.claimBg?.setFillStyle(canClaim ? COLORS.hero : COLORS.empty);
     this.claimLabel?.setText(canClaim ? "领取洞府收益" : "暂无收益可领");
     this.claimLabel?.setColor(canClaim ? "#1a1204" : COLORS.muted);
+    this.trialProgress?.setText(hubTrialSummary(this.save.trial.highestCleared));
   }
 
   private claimRewards(): void {
