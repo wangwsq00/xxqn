@@ -37,18 +37,39 @@ pnpm dev
 11. 行动条自动充能，单位出手（有已装备功法且冷却结束则按 1–4 槽释放，否则普通攻击；灵宠只普攻），战斗会分出胜负
 12. **试炼胜利**发放该关灵石（失败无奖励）；返回洞府可见钱包与已通关进度。若尚未拥有木剑，仍会掉入背包
 
-生产构建：
+生产构建（本地 `base` 为 `/`，预览 http://localhost:4173 ）：
 
 ```bash
 npm run build
 npm run preview
 ```
 
-战斗逻辑单测：
+单测：
 
 ```bash
 npm test
 ```
+
+## 在线试玩（GitHub Pages）
+
+推送到 `main`（或手动跑 **Deploy GitHub Pages** workflow）后，会构建 `dist/` 并发布到 `gh-pages` 分支。
+
+**项目页**（当前仓库 `wangwsq00/xxqn`）地址：
+
+https://wangwsq00.github.io/xxqn/
+
+首次需要仓库维护者在 GitHub：**Settings → Pages → Build and deployment** 将 Source 设为 **Deploy from a branch**，Branch 选 **gh-pages** / **root**。
+
+Vite `base` 规则（见 `src/deploy/viteBase.ts`）：
+
+| 场景 | `base` | 地址形态 |
+|------|--------|----------|
+| 本地 dev / `npm run build` | `/` | `http://localhost:5173` |
+| GitHub Actions + 项目页仓库 | `/<repo>/` | `https://<user>.github.io/<repo>/` |
+| GitHub Actions + 用户/组织页（仓库名 `*.github.io`） | `/` | `https://<user>.github.io/` |
+| 手动覆盖 | `VITE_BASE` 或 `BASE_PATH` | 按你填的路径（会补尾斜杠） |
+
+若把本仓库改成用户主页仓库（例如改名为 `wangwsq00.github.io`），不必改代码，CI 会自动用 `/`。
 
 ## 设计文档
 

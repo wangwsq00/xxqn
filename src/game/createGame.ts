@@ -18,6 +18,9 @@ export function createGame(parent: string | HTMLElement): Phaser.Game {
     backgroundColor: "#0d0c14",
     pixelArt: false,
     antialias: true,
+    loader: {
+      baseURL: import.meta.env.BASE_URL,
+    },
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,

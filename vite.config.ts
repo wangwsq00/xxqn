@@ -1,6 +1,8 @@
 import { defineConfig } from "vitest/config";
+import { resolveViteBase } from "./src/deploy/viteBase";
 
 export default defineConfig({
+  base: resolveViteBase(process.env),
   server: {
     host: true,
     port: 5173,
