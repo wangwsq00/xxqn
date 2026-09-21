@@ -1,0 +1,22 @@
+{
+  "name": "xxqn",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "修仙千年 — 挂机手游 M1 可玩脚手架（Web TypeScript + Vite + Phaser 3）",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vite": "^6.3.1",
+    "vitest": "^3.2.4"
+  }
+}
