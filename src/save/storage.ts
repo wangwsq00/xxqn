@@ -1,6 +1,7 @@
 import { starterEquipment, migrateEquipment } from "../equip/state";
 import { migrateGongfa, starterGongfa } from "../gongfa/state";
 import { STARTER_STONES } from "../idle/constants";
+import { migrateTrial, starterTrial } from "../trial/state";
 import { clampGatheringLevel } from "../idle/gathering";
 import { accrueIdle } from "../idle/settle";
 import { clampLayer, clampMajor } from "../realm/costs";
@@ -9,7 +10,7 @@ import type { SaveData } from "./types";
 
 export { realmLabel } from "../realm/label";
 
-export type { SaveData, SaveIdle, SavePlayer, SaveGongfa } from "./types";
+export type { SaveData, SaveIdle, SavePlayer, SaveGongfa, SaveTrial } from "./types";
 
 export const SAVE_KEY = "xxqn-save-v1";
 
@@ -32,6 +33,7 @@ export function defaultSave(now = Date.now()): SaveData {
     },
     equipment: starterEquipment(),
     gongfa: starterGongfa(),
+    trial: starterTrial(),
   };
 }
 
@@ -67,6 +69,7 @@ export function migrateSave(raw: unknown, now = Date.now()): SaveData | null {
     },
     equipment: migrateEquipment(parsed.equipment),
     gongfa: migrateGongfa(parsed.gongfa),
+    trial: migrateTrial(parsed.trial),
   };
 }
 
