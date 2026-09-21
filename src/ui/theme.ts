@@ -15,6 +15,7 @@ export const COLORS = {
   log: "#d7c9a5",
   win: "#7dcea0",
   lose: "#f1948a",
+  heroHex: "#e6c35c",
 } as const;
 
 export const FONT = '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif';
