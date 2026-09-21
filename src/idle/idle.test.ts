@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_OFFLINE_SECONDS, QI_PER_SECOND_BY_MAJOR } from "./constants";
+import { MAX_OFFLINE_SECONDS, QI_PER_SECOND_BY_MAJOR, STARTER_STONES } from "./constants";
 import { gatheringBonus, qiPerSecond, stonesPerMinute, stonesPerSecond } from "./rates";
 import { accrueIdle, claimIdle, formatDuration, hasClaimable } from "./settle";
 import { defaultSave } from "../save/storage";
@@ -16,6 +16,7 @@ describe("idle rates", () => {
     expect(gatheringBonus(1)).toBeCloseTo(0.1);
     expect(qiPerSecond(1, 1)).toBeCloseTo(1.1);
     expect(qiPerSecond(1, 10)).toBeCloseTo(2);
+    expect(qiPerSecond(1, 99)).toBeCloseTo(2);
     expect(stonesPerSecond(1)).toBeCloseTo(1 / 60);
     expect(stonesPerMinute(2)).toBe(2);
   });
@@ -31,7 +32,7 @@ describe("idle settlement", () => {
     expect(next.idle.pendingLingqi).toBe(60);
     expect(next.idle.pendingStones).toBeCloseTo(1);
     expect(next.player.lingqi).toBe(0);
-    expect(next.player.stones).toBe(0);
+    expect(next.player.stones).toBe(STARTER_STONES);
   });
 
   it("caps a single offline gap at 8 hours and discards the overflow", () => {
@@ -66,7 +67,7 @@ describe("idle settlement", () => {
     const save = defaultSave(t0);
     const claimed = claimIdle(save, t0 + 90_000);
     expect(claimed.save.player.lingqi).toBe(90);
-    expect(claimed.save.player.stones).toBe(1);
+    expect(claimed.save.player.stones).toBe(STARTER_STONES + 1);
     expect(claimed.save.idle.pendingLingqi).toBe(0);
     expect(claimed.save.idle.pendingStones).toBeCloseTo(0.5);
     expect(hasClaimable(claimed.save)).toBe(false);

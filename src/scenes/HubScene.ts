@@ -102,18 +102,24 @@ export class HubScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.makeClaimButton(width / 2, 560);
-    this.makeButton(width / 2 - 190, 650, "装备", () => {
+    this.makeButton(width / 2 - 190, 650, "聚灵阵", () => {
+      const { save } = accrueIdle(this.save);
+      this.save = save;
+      persistSave(this.save);
+      this.scene.start("Gathering");
+    }, 280);
+    this.makeButton(width / 2 + 190, 650, "装备", () => {
       const { save } = accrueIdle(this.save);
       this.save = save;
       persistSave(this.save);
       this.scene.start("Equip");
     }, 280);
-    this.makeButton(width / 2 + 190, 650, "进入试炼", () => {
+    this.makeButton(width / 2, 740, "进入试炼", () => {
       const { save } = accrueIdle(this.save);
       this.save = save;
       persistSave(this.save);
       this.scene.start("Battle");
-    }, 280);
+    });
 
     this.add
       .text(width / 2, height - 72, "阵容：主角固定我方 1 号中位 · 5v5 空位可空", {

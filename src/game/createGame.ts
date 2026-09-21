@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { BootScene } from "../scenes/BootScene";
 import { BattleScene } from "../scenes/BattleScene";
 import { EquipScene } from "../scenes/EquipScene";
+import { GatheringScene } from "../scenes/GatheringScene";
 import { HubScene } from "../scenes/HubScene";
 import { GAME_HEIGHT, GAME_WIDTH } from "../ui/theme";
 
@@ -18,6 +19,6 @@ export function createGame(parent: string | HTMLElement): Phaser.Game {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-    scene: [BootScene, HubScene, EquipScene, BattleScene],
+    scene: [BootScene, HubScene, GatheringScene, EquipScene, BattleScene],
   });
 }
