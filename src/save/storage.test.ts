@@ -74,4 +74,36 @@ describe("save migrate and load", () => {
     expect(stored.idle.pendingLingqi).toBe(120);
     expect(stored.equipment.items[0].defId).toBe(WOODEN_SWORD_DEF_ID);
   });
+
+  it("auto-applies small-layer ups from stored lingqi on load", () => {
+    const storage = memoryStorage();
+    vi.stubGlobal("localStorage", storage);
+    persistSave(
+      {
+        version: 1,
+        savedAt: 50,
+        player: {
+          realmMajor: 1,
+          realmLayer: 1,
+          lingqi: 100,
+          stones: 0,
+          gatheringArrayLevel: 0,
+        },
+        idle: {
+          lastSettleAt: 50,
+          pendingLingqi: 0,
+          pendingStones: 0,
+          lastOfflineSeconds: 0,
+        },
+        equipment: starterEquipment(),
+      },
+      50,
+    );
+    const loaded = loadSave(50);
+    expect(loaded.player.realmLayer).toBe(2);
+    expect(loaded.player.realmMajor).toBe(1);
+    expect(loaded.player.lingqi).toBeCloseTo(0);
+    const stored = JSON.parse(storage.getItem(SAVE_KEY) ?? "{}");
+    expect(stored.player.realmLayer).toBe(2);
+  });
 });

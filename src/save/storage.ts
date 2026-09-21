@@ -2,7 +2,11 @@ import { starterEquipment, migrateEquipment } from "../equip/state";
 import { STARTER_STONES } from "../idle/constants";
 import { clampGatheringLevel } from "../idle/gathering";
 import { accrueIdle } from "../idle/settle";
+import { clampLayer, clampMajor } from "../realm/costs";
+import { applyMinorLayerUps } from "../realm/upgrade";
 import type { SaveData } from "./types";
+
+export { realmLabel } from "../realm/label";
 
 export type { SaveData, SaveIdle, SavePlayer } from "./types";
 
@@ -47,8 +51,8 @@ export function migrateSave(raw: unknown, now = Date.now()): SaveData | null {
     version: 1,
     savedAt,
     player: {
-      realmMajor: parsed.player.realmMajor ?? 1,
-      realmLayer: parsed.player.realmLayer ?? 1,
+      realmMajor: clampMajor(parsed.player.realmMajor ?? 1),
+      realmLayer: clampLayer(parsed.player.realmLayer ?? 1),
       lingqi: parsed.player.lingqi ?? 0,
       stones: parsed.player.stones ?? 0,
       gatheringArrayLevel: clampGatheringLevel(parsed.player.gatheringArrayLevel ?? 0),
@@ -77,7 +81,8 @@ export function loadSave(now = Date.now()): SaveData {
       persistSave(fresh, now);
       return fresh;
     }
-    const { save } = accrueIdle(migrated, now);
+    const { save: accrued } = accrueIdle(migrated, now);
+    const { save } = applyMinorLayerUps(accrued);
     persistSave(save, now);
     return save;
   } catch {
@@ -88,11 +93,4 @@ export function loadSave(now = Date.now()): SaveData {
 export function persistSave(save: SaveData, now = Date.now()): void {
   const next: SaveData = { ...save, savedAt: now };
   localStorage.setItem(SAVE_KEY, JSON.stringify(next));
-}
-
-export function realmLabel(major: number, layer: number): string {
-  const majors = ["炼气境", "筑基境", "金丹境", "元婴境", "化神境", "炼虚境", "合体境", "大乘境", "渡劫境"];
-  const name = majors[major - 1] ?? "炼气境";
-  const layers = ["一", "二", "三", "四", "五", "六", "七", "八", "九"];
-  return `${name}${layers[layer - 1] ?? "一"}层`;
 }

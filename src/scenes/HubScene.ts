@@ -9,11 +9,20 @@ import {
   hasClaimable,
   trimRate,
 } from "../idle/settle";
+import { isPeakMinorLayer } from "../realm/costs";
+import { cultivationProgressText, cultivationRatio } from "../realm/format";
+import { applyMinorLayerUps } from "../realm/upgrade";
 import { loadSave, persistSave, realmLabel, type SaveData } from "../save/storage";
 import { COLORS, FONT } from "../ui/theme";
 
+const QI_BAR_W = 360;
+
 export class HubScene extends Phaser.Scene {
   private save!: SaveData;
+  private realmText?: Phaser.GameObjects.Text;
+  private progressText?: Phaser.GameObjects.Text;
+  private breakthroughHint?: Phaser.GameObjects.Text;
+  private qiBar?: Phaser.GameObjects.Rectangle;
   private walletText?: Phaser.GameObjects.Text;
   private rateText?: Phaser.GameObjects.Text;
   private pendingText?: Phaser.GameObjects.Text;
@@ -48,26 +57,45 @@ export class HubScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.add.rectangle(width / 2, 360, 600, 400, COLORS.panel).setStrokeStyle(2, COLORS.panelStroke);
+    this.add.rectangle(width / 2, 372, 600, 430, COLORS.panel).setStrokeStyle(2, COLORS.panelStroke);
 
-    this.add
-      .text(width / 2, 196, realmLabel(this.save.player.realmMajor, this.save.player.realmLayer), {
+    this.realmText = this.add
+      .text(width / 2, 188, "", {
         fontFamily: FONT,
         fontSize: "32px",
         color: COLORS.text,
       })
       .setOrigin(0.5);
 
-    this.walletText = this.add
-      .text(width / 2, 250, "", {
+    this.progressText = this.add
+      .text(width / 2, 228, "", {
         fontFamily: FONT,
-        fontSize: "26px",
+        fontSize: "18px",
+        color: COLORS.heroHex,
+      })
+      .setOrigin(0.5);
+
+    this.add.rectangle(width / 2, 258, QI_BAR_W, 12, COLORS.hpBg);
+    this.qiBar = this.add.rectangle(width / 2 - QI_BAR_W / 2, 258, QI_BAR_W, 12, COLORS.atb).setOrigin(0, 0.5);
+
+    this.breakthroughHint = this.add
+      .text(width / 2, 282, "", {
+        fontFamily: FONT,
+        fontSize: "15px",
+        color: COLORS.muted,
+      })
+      .setOrigin(0.5);
+
+    this.walletText = this.add
+      .text(width / 2, 312, "", {
+        fontFamily: FONT,
+        fontSize: "24px",
         color: COLORS.log,
       })
       .setOrigin(0.5);
 
     this.rateText = this.add
-      .text(width / 2, 304, "", {
+      .text(width / 2, 356, "", {
         fontFamily: FONT,
         fontSize: "18px",
         color: COLORS.muted,
@@ -76,7 +104,7 @@ export class HubScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.pendingText = this.add
-      .text(width / 2, 358, "", {
+      .text(width / 2, 408, "", {
         fontFamily: FONT,
         fontSize: "22px",
         color: COLORS.heroHex,
@@ -84,7 +112,7 @@ export class HubScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.offlineText = this.add
-      .text(width / 2, 412, "", {
+      .text(width / 2, 458, "", {
         fontFamily: FONT,
         fontSize: "16px",
         color: COLORS.muted,
@@ -94,14 +122,16 @@ export class HubScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.claimHint = this.add
-      .text(width / 2, 468, "本地存档已启用 · 挂机收益写入浏览器 LocalStorage", {
+      .text(width / 2, 512, "本地存档已启用 · 挂机收益写入浏览器 LocalStorage", {
         fontFamily: FONT,
         fontSize: "16px",
         color: COLORS.muted,
+        align: "center",
+        wordWrap: { width: 560 },
       })
       .setOrigin(0.5);
 
-    this.makeClaimButton(width / 2, 560);
+    this.makeClaimButton(width / 2, 580);
     this.makeButton(width / 2 - 190, 650, "聚灵阵", () => {
       const { save } = accrueIdle(this.save);
       this.save = save;
@@ -151,19 +181,26 @@ export class HubScene extends Phaser.Scene {
 
   private refreshIdle(): void {
     const { save } = accrueIdle(this.save);
-    this.save = save;
+    const cultivated = applyMinorLayerUps(save);
+    this.save = cultivated.save;
     persistSave(this.save);
     this.paint();
   }
 
   private paint(): void {
-    const { realmMajor, gatheringArrayLevel, lingqi, stones } = this.save.player;
+    const { realmMajor, realmLayer, gatheringArrayLevel, lingqi, stones } = this.save.player;
     const pending = claimableAmounts(this.save);
     const qiRate = qiPerSecond(realmMajor, gatheringArrayLevel);
     const stoneRate = stonesPerMinute(realmMajor);
     const arrayHint =
       gatheringArrayLevel > 0 ? `聚灵阵 ${gatheringArrayLevel} 级` : "聚灵阵未布置";
 
+    this.realmText?.setText(realmLabel(realmMajor, realmLayer));
+    this.progressText?.setText(cultivationProgressText(realmMajor, realmLayer, lingqi));
+    this.qiBar?.setScale(cultivationRatio(realmMajor, realmLayer, lingqi), 1);
+    this.breakthroughHint?.setText(
+      isPeakMinorLayer(realmLayer) ? "大境界突破需挑战心魔，本切片未开放" : "",
+    );
     this.walletText?.setText(`灵气 ${Math.floor(lingqi)}  ·  灵石 ${Math.floor(stones)}`);
     this.rateText?.setText(
       `修炼速率  ${trimRate(qiRate)} 灵气/秒  ·  ${trimRate(stoneRate)} 灵石/分钟\n${arrayHint}`,
@@ -184,16 +221,21 @@ export class HubScene extends Phaser.Scene {
   }
 
   private claimRewards(): void {
-    const beforeLingqi = this.save.player.lingqi;
-    const beforeStones = this.save.player.stones;
-    const { save } = claimIdle(this.save);
-    this.save = save;
+    const { save: accrued } = accrueIdle(this.save);
+    const pending = claimableAmounts(accrued);
+    const { save: claimed } = claimIdle(accrued);
+    const cultivated = applyMinorLayerUps(claimed);
+    this.save = cultivated.save;
     persistSave(this.save);
-    const gainedLingqi = Math.floor(save.player.lingqi - beforeLingqi);
-    const gainedStones = Math.floor(save.player.stones - beforeStones);
-    if (gainedLingqi > 0 || gainedStones > 0) {
+    if (pending.lingqi > 0 || pending.stones > 0) {
+      const lines = [`已领取  灵气 ${pending.lingqi}  ·  灵石 ${pending.stones}`];
+      if (cultivated.layersGained > 0) {
+        lines.push(
+          `修为提升：${realmLabel(cultivated.fromMajor, cultivated.fromLayer)} → ${realmLabel(cultivated.toMajor, cultivated.toLayer)}`,
+        );
+      }
       this.claimHint?.setColor(COLORS.win);
-      this.claimHint?.setText(`已领取  灵气 ${gainedLingqi}  ·  灵石 ${gainedStones}`);
+      this.claimHint?.setText(lines.join("\n"));
     } else {
       this.claimHint?.setColor(COLORS.muted);
       this.claimHint?.setText("尚无整数收益，稍后再来");
