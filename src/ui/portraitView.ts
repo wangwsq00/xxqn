@@ -11,15 +11,17 @@ export function hasPortrait(scene: Phaser.Scene, key: string | undefined): key i
   return typeof key === "string" && key.length > 0 && scene.textures.exists(key);
 }
 
-/** 方形立绘；源图已裁成 512²，按槽位边长显示，避免拉伸。 */
+/** 方形立绘。战斗槽用底中锚点（origin 0.5, 1）；洞府/列表框内仍可居中。 */
 export function addPortrait(
   scene: Phaser.Scene,
   x: number,
   y: number,
   key: string,
   size: number,
+  origin: { x: number; y: number } = { x: 0.5, y: 0.5 },
 ): Phaser.GameObjects.Image {
   const image = scene.add.image(x, y, key);
+  image.setOrigin(origin.x, origin.y);
   image.setDisplaySize(size, size);
   return image;
 }
