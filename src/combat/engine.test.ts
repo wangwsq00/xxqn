@@ -137,6 +137,26 @@ describe("ATB battle", () => {
     expect(heroNames[0]).toBe("七星剑阵");
     expect(heroNames[1]).toBe("普通攻击");
   });
+
+  it("falls through to 天罡护体 when 七星剑阵 is on cooldown", () => {
+    const engine = new BattleEngine(
+      createTrialEncounter({}, 1, [
+        { def: SEVEN_STAR_SWORD, cooldownRemaining: 0 },
+        { def: HEAVENLY_GUARD, cooldownRemaining: 0 },
+      ]),
+      () => 0.01,
+    );
+    const heroNames: string[] = [];
+    for (let i = 0; i < 3000 && heroNames.length < 3 && engine.status === "ongoing"; i += 1) {
+      const result = engine.tick();
+      if (result?.actorId === "hero") {
+        heroNames.push(result.skillName);
+      }
+    }
+    expect(heroNames[0]).toBe("七星剑阵");
+    expect(heroNames[1]).toBe("天罡护体");
+    expect(heroNames[2]).toBe("普通攻击");
+  });
 });
 
 describe("guard gongfa", () => {
