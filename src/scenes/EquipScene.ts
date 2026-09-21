@@ -118,7 +118,7 @@ export class EquipScene extends Phaser.Scene {
       ? `攻击 +${def.stats.atk ?? 0} · 点击卸下`
       : slot === "weapon"
         ? "可装备背包中的木剑"
-        : "M1 占位";
+        : "暂无装备";
     this.add
       .text(x, y + 32, sub, {
         fontFamily: FONT,
