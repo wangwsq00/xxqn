@@ -1,66 +1,88 @@
-const SAVE_KEY = "xxqn-save-v1";
-const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
-const QI_PER_SECOND_LIANQI = 1;
+import { accrueIdle } from "../idle/settle";
+import type { SaveData } from "./types";
 
-export interface SaveData {
-  version: 1;
-  savedAt: number;
-  player: {
-    realmMajor: number;
-    realmLayer: number;
-    lingqi: number;
-    stones: number;
-  };
-}
+export type { SaveData, SaveIdle, SavePlayer } from "./types";
 
-export function defaultSave(): SaveData {
+export const SAVE_KEY = "xxqn-save-v1";
+
+export function defaultSave(now = Date.now()): SaveData {
   return {
     version: 1,
-    savedAt: Date.now(),
+    savedAt: now,
     player: {
       realmMajor: 1,
       realmLayer: 1,
       lingqi: 0,
       stones: 0,
+      gatheringArrayLevel: 0,
+    },
+    idle: {
+      lastSettleAt: now,
+      pendingLingqi: 0,
+      pendingStones: 0,
+      lastOfflineSeconds: 0,
     },
   };
 }
 
-export function loadSave(): SaveData {
+export function migrateSave(raw: unknown, now = Date.now()): SaveData | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const parsed = raw as Partial<SaveData> & {
+    player?: Partial<SaveData["player"]>;
+    idle?: Partial<SaveData["idle"]>;
+  };
+  if (parsed.version !== 1 || !parsed.player) {
+    return null;
+  }
+  const savedAt = typeof parsed.savedAt === "number" ? parsed.savedAt : now;
+  const lastSettleAt =
+    typeof parsed.idle?.lastSettleAt === "number" ? parsed.idle.lastSettleAt : savedAt;
+  return {
+    version: 1,
+    savedAt,
+    player: {
+      realmMajor: parsed.player.realmMajor ?? 1,
+      realmLayer: parsed.player.realmLayer ?? 1,
+      lingqi: parsed.player.lingqi ?? 0,
+      stones: parsed.player.stones ?? 0,
+      gatheringArrayLevel: parsed.player.gatheringArrayLevel ?? 0,
+    },
+    idle: {
+      lastSettleAt,
+      pendingLingqi: parsed.idle?.pendingLingqi ?? 0,
+      pendingStones: parsed.idle?.pendingStones ?? 0,
+      lastOfflineSeconds: parsed.idle?.lastOfflineSeconds ?? 0,
+    },
+  };
+}
+
+export function loadSave(now = Date.now()): SaveData {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) {
-      const fresh = defaultSave();
-      persistSave(fresh);
+      const fresh = defaultSave(now);
+      persistSave(fresh, now);
       return fresh;
     }
-    const parsed = JSON.parse(raw) as SaveData;
-    if (parsed.version !== 1 || !parsed.player) {
-      return defaultSave();
+    const migrated = migrateSave(JSON.parse(raw), now);
+    if (!migrated) {
+      const fresh = defaultSave(now);
+      persistSave(fresh, now);
+      return fresh;
     }
-    return settleIdle(parsed);
+    const { save } = accrueIdle(migrated, now);
+    persistSave(save, now);
+    return save;
   } catch {
-    return defaultSave();
+    return defaultSave(now);
   }
 }
 
-export function persistSave(save: SaveData): void {
-  const next = { ...save, savedAt: Date.now() };
+export function persistSave(save: SaveData, now = Date.now()): void {
+  const next: SaveData = { ...save, savedAt: now };
   localStorage.setItem(SAVE_KEY, JSON.stringify(next));
-}
-
-/** 炼气境 1 灵气/秒；离线封顶 8 小时。 */
-export function settleIdle(save: SaveData, now = Date.now()): SaveData {
-  const elapsed = Math.max(0, Math.floor((now - save.savedAt) / 1000));
-  const gained = Math.min(elapsed, MAX_OFFLINE_SECONDS) * QI_PER_SECOND_LIANQI;
-  return {
-    ...save,
-    savedAt: now,
-    player: {
-      ...save.player,
-      lingqi: save.player.lingqi + gained,
-    },
-  };
 }
 
 export function realmLabel(major: number, layer: number): string {
