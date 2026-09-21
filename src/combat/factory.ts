@@ -77,13 +77,17 @@ export function makeCombatant(params: {
   };
 }
 
-export function makeHero(skills: EquippedSkill[], gear: Partial<GearBonus> = EMPTY_GEAR): Combatant {
+export function makeHero(
+  skills: EquippedSkill[],
+  gear: Partial<GearBonus> = EMPTY_GEAR,
+  realmMajor = 1,
+): Combatant {
   return makeCombatant({
     id: "hero",
     name: "主角",
     side: "ally",
     slot: CENTER_SLOT,
-    stats: deriveCombatStats(1, DEFAULT_APTITUDES, gear),
+    stats: deriveCombatStats(realmMajor, DEFAULT_APTITUDES, gear),
     skills,
     isHero: true,
   });

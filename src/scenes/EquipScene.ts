@@ -8,7 +8,7 @@ import {
   unequipSlot,
 } from "../equip/state";
 import { EQUIP_SLOT_IDS, type EquipSlotId } from "../equip/types";
-import { deriveCombatStats } from "../combat/factory";
+import { deriveCombatStats, realmBaseStat } from "../combat/factory";
 import { loadSave, persistSave, type SaveData } from "../save/storage";
 import { COLORS, FONT } from "../ui/theme";
 
@@ -182,7 +182,9 @@ export class EquipScene extends Phaser.Scene {
   private refreshStats(): void {
     const gear = gearBonusFromEquipment(this.save.equipment);
     const stats = deriveCombatStats(this.save.player.realmMajor, undefined, gear);
-    const extra = gear.atk > 0 ? `（基础 100 + 装备 ${gear.atk}）` : "（未穿武器）";
+    const extra = gear.atk > 0
+      ? `（基础 ${realmBaseStat(this.save.player.realmMajor)} + 装备 ${gear.atk}）`
+      : "（未穿武器）";
     this.atkText?.setText(`当前攻击 ${stats.atk} ${extra}\n木剑 M1 默认 +${WOODEN_SWORD_ATK} 攻`);
   }
 

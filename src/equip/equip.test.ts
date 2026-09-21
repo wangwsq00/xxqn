@@ -33,6 +33,7 @@ describe("equipment catalog and slots", () => {
     expect(bare.atk).toBe(100);
     expect(armed.atk).toBe(100 + WOODEN_SWORD_ATK);
     expect(armed.hp).toBe(bare.hp);
+    expect(deriveCombatStats(2, undefined, bonus).atk).toBe(150 + WOODEN_SWORD_ATK);
   });
 
   it("unequipping returns the sword to the bag and clears the ATK bonus", () => {

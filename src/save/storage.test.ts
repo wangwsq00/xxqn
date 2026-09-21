@@ -106,4 +106,34 @@ describe("save migrate and load", () => {
     const stored = JSON.parse(storage.getItem(SAVE_KEY) ?? "{}");
     expect(stored.player.realmLayer).toBe(2);
   });
+
+  it("does not auto-break 炼气九层 into 筑基 on load", () => {
+    const storage = memoryStorage();
+    vi.stubGlobal("localStorage", storage);
+    persistSave(
+      {
+        version: 1,
+        savedAt: 80,
+        player: {
+          realmMajor: 1,
+          realmLayer: 9,
+          lingqi: 500,
+          stones: 0,
+          gatheringArrayLevel: 0,
+        },
+        idle: {
+          lastSettleAt: 80,
+          pendingLingqi: 0,
+          pendingStones: 0,
+          lastOfflineSeconds: 0,
+        },
+        equipment: starterEquipment(),
+      },
+      80,
+    );
+    const loaded = loadSave(80);
+    expect(loaded.player.realmMajor).toBe(1);
+    expect(loaded.player.realmLayer).toBe(9);
+    expect(loaded.player.lingqi).toBe(500);
+  });
 });
