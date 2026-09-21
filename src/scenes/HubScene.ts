@@ -15,6 +15,9 @@ import { applyMinorLayerUps } from "../realm/upgrade";
 import { canChallengeHeartDemon, heartDemonHint } from "../realm/breakthrough";
 import { loadSave, persistSave, realmLabel, type SaveData } from "../save/storage";
 import { hubTrialSummary } from "../trial/state";
+import { HUB_PORTRAIT_SIZE, PORTRAIT } from "../assets/portraits";
+import { getPetDef } from "../pet/catalog";
+import { addFramedPortrait } from "../ui/portraitView";
 import { COLORS, FONT } from "../ui/theme";
 
 const QI_BAR_W = 360;
@@ -63,6 +66,7 @@ export class HubScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add.rectangle(width / 2, 372, 600, 430, COLORS.panel).setStrokeStyle(2, COLORS.panelStroke);
+    this.drawHubPortraits(width);
 
     this.realmText = this.add
       .text(width / 2, 188, "", {
@@ -251,6 +255,41 @@ export class HubScene extends Phaser.Scene {
     this.claimLabel?.setText(canClaim ? "领取洞府收益" : "暂无收益可领");
     this.claimLabel?.setColor(canClaim ? "#1a1204" : COLORS.muted);
     this.trialProgress?.setText(hubTrialSummary(this.save.trial.highestCleared));
+  }
+
+  private drawHubPortraits(width: number): void {
+    const size = HUB_PORTRAIT_SIZE;
+    const y = 78;
+    const hero = addFramedPortrait(this, 92, y, PORTRAIT.playerHero, size, {
+      stroke: 0xfff3c4,
+      fill: COLORS.hero,
+    });
+    hero.frame.setDepth(2);
+    hero.portrait?.setDepth(3);
+    this.add
+      .text(92, y + size / 2 + 14, "主角", {
+        fontFamily: FONT,
+        fontSize: "14px",
+        color: COLORS.text,
+      })
+      .setOrigin(0.5)
+      .setDepth(3);
+
+    const pet = this.save.pets.equippedId ? getPetDef(this.save.pets.equippedId) : undefined;
+    const petView = addFramedPortrait(this, width - 92, y, pet?.portraitKey, size, {
+      stroke: pet ? 0x9ed4ea : COLORS.panelStroke,
+      fill: pet ? COLORS.ally : COLORS.empty,
+    });
+    petView.frame.setDepth(2);
+    petView.portrait?.setDepth(3);
+    this.add
+      .text(width - 92, y + size / 2 + 14, pet ? pet.name : "灵宠未出战", {
+        fontFamily: FONT,
+        fontSize: "14px",
+        color: pet ? COLORS.text : COLORS.muted,
+      })
+      .setOrigin(0.5)
+      .setDepth(3);
   }
 
   private claimRewards(): void {

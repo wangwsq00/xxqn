@@ -1,7 +1,9 @@
 import Phaser from "phaser";
+import { PET_LIST_PORTRAIT_SIZE, PET_SLOT_PORTRAIT_SIZE } from "../assets/portraits";
 import { getPetDef } from "../pet/catalog";
 import { derivePetStats, equipPet, isPetEquipped, unequipPet, unequippedOwned } from "../pet/state";
 import { loadSave, persistSave, type SaveData } from "../save/storage";
+import { addFramedPortrait } from "../ui/portraitView";
 import { COLORS, FONT } from "../ui/theme";
 
 export class PetScene extends Phaser.Scene {
@@ -81,15 +83,20 @@ export class PetScene extends Phaser.Scene {
       .setStrokeStyle(2, filled ? 0x9ed4ea : COLORS.panelStroke);
 
     this.add
-      .text(x, y - 62, "出战槽 · 我方 2 号位", {
+      .text(x - 40, y - 62, "出战槽 · 我方 2 号位", {
         fontFamily: FONT,
         fontSize: "16px",
         color: filled ? COLORS.text : COLORS.muted,
       })
       .setOrigin(0.5);
 
+    addFramedPortrait(this, x - 190, y + 8, def?.portraitKey, PET_SLOT_PORTRAIT_SIZE, {
+      stroke: filled ? 0x9ed4ea : COLORS.panelStroke,
+      fill: filled ? COLORS.ally : COLORS.empty,
+    });
+
     this.add
-      .text(x, y - 18, def ? def.name : "空", {
+      .text(x + 70, y - 18, def ? def.name : "空", {
         fontFamily: FONT,
         fontSize: "32px",
         color: COLORS.text,
@@ -100,21 +107,21 @@ export class PetScene extends Phaser.Scene {
       ? `${def.gradeLabel} · ${def.typeLabel} · 点击卸下`
       : "可装备已有灵宠；主角始终占 1 号中位";
     this.add
-      .text(x, y + 28, sub, {
+      .text(x + 70, y + 28, sub, {
         fontFamily: FONT,
         fontSize: "16px",
         color: COLORS.muted,
         align: "center",
-        wordWrap: { width: 500 },
+        wordWrap: { width: 320 },
       })
       .setOrigin(0.5);
 
     if (def) {
       const stats = derivePetStats(def, this.save.player.realmMajor);
       this.add
-        .text(x, y + 64, `血 ${stats.hp}  ·  攻 ${stats.atk}  ·  防 ${stats.def}  ·  速 ${stats.spd}`, {
+        .text(x + 70, y + 64, `血 ${stats.hp}  ·  攻 ${stats.atk}  ·  防 ${stats.def}  ·  速 ${stats.spd}`, {
           fontFamily: FONT,
-          fontSize: "16px",
+          fontSize: "15px",
           color: COLORS.heroHex,
         })
         .setOrigin(0.5);
@@ -147,9 +154,13 @@ export class PetScene extends Phaser.Scene {
         bg.setInteractive({ useHandCursor: true });
         bg.on("pointerdown", () => this.equip(def.id));
       }
+      addFramedPortrait(this, width / 2 - 220, y, def.portraitKey, PET_LIST_PORTRAIT_SIZE, {
+        stroke: available ? 0x3a2a08 : COLORS.panelStroke,
+        fill: available ? COLORS.hero : COLORS.empty,
+      });
       const titleColor = available ? "#1a1204" : COLORS.text;
       this.add
-        .text(width / 2, y - 22, `${def.name}  ·  ${def.gradeLabel}`, {
+        .text(width / 2 + 28, y - 22, `${def.name}  ·  ${def.gradeLabel}`, {
           fontFamily: FONT,
           fontSize: "22px",
           color: titleColor,
@@ -160,12 +171,12 @@ export class PetScene extends Phaser.Scene {
         ? "已出战我方 2 号位"
         : `${def.summary}  血${stats.hp} 攻${stats.atk}  点击出战`;
       this.add
-        .text(width / 2, y + 18, sub, {
+        .text(width / 2 + 28, y + 18, sub, {
           fontFamily: FONT,
           fontSize: "14px",
           color: available ? "#3a2a08" : COLORS.muted,
           align: "center",
-          wordWrap: { width: 520 },
+          wordWrap: { width: 400 },
         })
         .setOrigin(0.5);
     });

@@ -1,3 +1,4 @@
+import { PORTRAIT, type PortraitKey } from "../assets/portraits";
 import type { SlotIndex } from "../combat/types";
 
 /** 开局灵宠。文档未给名称表，M1 工程默认。 */
@@ -15,6 +16,7 @@ export interface PetDef {
   gradeLabel: string;
   summary: string;
   slot: SlotIndex;
+  portraitKey: PortraitKey;
   /** 相对大境界基础值（100/150/…）的系数。文档无表，见工程决策。 */
   hpRatio: number;
   atkRatio: number;
@@ -40,6 +42,7 @@ export const PET_DEFS: Record<string, PetDef> = {
     gradeLabel: "黄阶幼兽",
     summary: "开局灵宠。出战占我方 2 号位，只使用普通攻击。",
     slot: PET_ALLY_SLOT,
+    portraitKey: PORTRAIT.petLinghu,
     hpRatio: 1.5,
     atkRatio: 0.55,
     defRatio: 0.32,

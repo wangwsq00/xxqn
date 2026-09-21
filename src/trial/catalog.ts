@@ -1,3 +1,4 @@
+import { PORTRAIT, type PortraitKey } from "../assets/portraits";
 import type { SlotIndex } from "../combat/types";
 
 export const TRIAL_STAGE_COUNT = 3;
@@ -5,6 +6,7 @@ export const TRIAL_STAGE_COUNT = 3;
 export interface TrialEnemyTemplate {
   name: string;
   slot: SlotIndex;
+  portraitKey: PortraitKey;
   hp: number;
   atk: number;
   def: number;
@@ -39,6 +41,7 @@ export const TRIAL_STAGES: TrialStageDef[] = [
       {
         name: "野修甲",
         slot: 1,
+        portraitKey: PORTRAIT.enemyWild,
         hp: 180,
         atk: 95,
         def: 25,
@@ -53,6 +56,7 @@ export const TRIAL_STAGES: TrialStageDef[] = [
       {
         name: "野修乙",
         slot: 2,
+        portraitKey: PORTRAIT.enemyWild,
         hp: 150,
         atk: 88,
         def: 20,
@@ -74,6 +78,7 @@ export const TRIAL_STAGES: TrialStageDef[] = [
       {
         name: "邪修甲",
         slot: 1,
+        portraitKey: PORTRAIT.enemyEvil,
         hp: 225,
         atk: 118,
         def: 32,
@@ -88,6 +93,7 @@ export const TRIAL_STAGES: TrialStageDef[] = [
       {
         name: "邪修乙",
         slot: 2,
+        portraitKey: PORTRAIT.enemyEvil,
         hp: 190,
         atk: 110,
         def: 26,
@@ -109,6 +115,7 @@ export const TRIAL_STAGES: TrialStageDef[] = [
       {
         name: "魔修甲",
         slot: 1,
+        portraitKey: PORTRAIT.enemyDemon,
         hp: 280,
         atk: 145,
         def: 40,
@@ -123,6 +130,7 @@ export const TRIAL_STAGES: TrialStageDef[] = [
       {
         name: "魔修乙",
         slot: 2,
+        portraitKey: PORTRAIT.enemyDemon,
         hp: 240,
         atk: 132,
         def: 34,

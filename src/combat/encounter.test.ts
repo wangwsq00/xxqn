@@ -15,6 +15,8 @@ describe("createHeartDemonEncounter", () => {
     expect(enemies).toHaveLength(1);
     expect(enemies[0]?.name).toBe("心魔");
     expect(enemies[0]?.slot).toBe(1);
+    expect(enemies[0]?.portraitKey).toBe("enemy_heart_demon");
+    expect(hero?.portraitKey).toBe("player_hero");
     expect(hero?.stats.atk).toBe(100);
     expect(enemies[0]?.stats.hp).toBe(200);
   });
@@ -49,6 +51,9 @@ describe("createTrialEncounter realm stats", () => {
     expect(stage1.map((unit) => unit.name)).toEqual(["野修甲", "野修乙"]);
     expect(stage2.map((unit) => unit.name)).toEqual(["邪修甲", "邪修乙"]);
     expect(stage3.map((unit) => unit.name)).toEqual(["魔修甲", "魔修乙"]);
+    expect(stage1.map((unit) => unit.portraitKey)).toEqual(["enemy_wild", "enemy_wild"]);
+    expect(stage2.map((unit) => unit.portraitKey)).toEqual(["enemy_evil", "enemy_evil"]);
+    expect(stage3.map((unit) => unit.portraitKey)).toEqual(["enemy_demon", "enemy_demon"]);
     expect(stage1[0]?.stats.hp).toBe(180);
     expect(stage2[0]?.stats.hp).toBeGreaterThan(stage1[0]!.stats.hp);
     expect(stage3[0]?.stats.hp).toBeGreaterThan(stage2[0]!.stats.hp);
@@ -68,6 +73,7 @@ describe("createTrialEncounter with pet", () => {
     expect(fox?.slot).toBe(2);
     expect(fox?.side).toBe("ally");
     expect(fox?.isHero).toBe(false);
+    expect(fox?.portraitKey).toBe("pet_linghu");
     expect(units.filter((unit) => unit.side === "ally")).toHaveLength(2);
   });
 });

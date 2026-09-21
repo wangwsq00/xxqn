@@ -61,6 +61,7 @@ export function makePetCombatant(def: PetDef, realmMajor = 1): Combatant {
     stats: derivePetStats(def, realmMajor),
     skills: [],
     isHero: false,
+    portraitKey: def.portraitKey,
   });
 }
 

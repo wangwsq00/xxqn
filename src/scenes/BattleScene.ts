@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { ATB_MAX, SLOT_ORDER_TOP_TO_BOTTOM, TICK_MS } from "../combat/constants";
+import { ALLY_SLOT_X, ATB_MAX, SLOT_FOOT_Y, SLOT_ORDER_TOP_TO_BOTTOM, TICK_MS } from "../combat/constants";
 import {
   createHeartDemonEncounter,
   createTrialEncounter,
@@ -16,6 +16,8 @@ import { realmLabel } from "../realm/label";
 import { loadSave, persistSave, type SaveData } from "../save/storage";
 import { getTrialStage } from "../trial/catalog";
 import { isTrialStageUnlocked } from "../trial/state";
+import { BATTLE_PORTRAIT_SIZE, PORTRAIT } from "../assets/portraits";
+import { addPortrait, hasPortrait } from "../ui/portraitView";
 import { COLORS, FONT } from "../ui/theme";
 
 interface SlotView {
@@ -23,7 +25,9 @@ interface SlotView {
   side: Combatant["side"];
   rootX: number;
   rootY: number;
+  root: Phaser.GameObjects.Container;
   body: Phaser.GameObjects.Rectangle;
+  portrait?: Phaser.GameObjects.Image;
   nameText: Phaser.GameObjects.Text;
   hpBarBg: Phaser.GameObjects.Rectangle;
   hpBar: Phaser.GameObjects.Rectangle;
@@ -32,9 +36,9 @@ interface SlotView {
   hpText: Phaser.GameObjects.Text;
 }
 
-const CARD_W = 148;
-const CARD_H = 118;
-const BAR_W = 120;
+const BAR_W = 112;
+const EMPTY_SLOT_W = 120;
+const EMPTY_SLOT_H = 56;
 
 export class BattleScene extends Phaser.Scene {
   private save!: SaveData;
@@ -115,7 +119,7 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(118, 128, "我方", {
+      .text(118, 108, "我方", {
         fontFamily: FONT,
         fontSize: "20px",
         color: "#7ec8e3",
@@ -123,19 +127,18 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width - 118, 128, "敌方", {
+      .text(width - 118, 108, "敌方", {
         fontFamily: FONT,
         fontSize: "20px",
         color: "#e08080",
       })
       .setOrigin(0.5);
 
-    const startY = 188;
-    const gap = 132;
-    SLOT_ORDER_TOP_TO_BOTTOM.forEach((slot, index) => {
-      const y = startY + index * gap;
-      this.drawSlot("ally", slot, 150, y);
-      this.drawSlot("enemy", slot, width - 150, y);
+    const enemyX = width - ALLY_SLOT_X;
+    SLOT_ORDER_TOP_TO_BOTTOM.forEach((slot) => {
+      const y = SLOT_FOOT_Y[slot];
+      this.drawSlot("ally", slot, ALLY_SLOT_X, y);
+      this.drawSlot("enemy", slot, enemyX, y);
     });
 
     this.add.rectangle(width / 2, 980, 640, 160, COLORS.panel).setStrokeStyle(1, COLORS.panelStroke);
@@ -183,8 +186,25 @@ export class BattleScene extends Phaser.Scene {
   private drawSlot(side: Combatant["side"], slot: SlotIndex, x: number, y: number): void {
     const unit = this.engine.units.find((item) => item.side === side && item.slot === slot);
     const fill = unit ? (unit.isHero ? COLORS.hero : side === "ally" ? COLORS.ally : COLORS.enemy) : COLORS.empty;
-    const body = this.add.rectangle(x, y, CARD_W, CARD_H, fill, unit ? 1 : 0.35);
+    const root = this.add.container(x, y);
+
+    const showArt = Boolean(unit && hasPortrait(this, unit.portraitKey));
+    const body = this.add
+      .rectangle(0, 0, EMPTY_SLOT_W, EMPTY_SLOT_H, fill, unit && !showArt ? 1 : 0.35)
+      .setOrigin(0.5, 1);
     body.setStrokeStyle(2, unit?.isHero ? 0xfff3c4 : 0x5a5478);
+    body.setVisible(!showArt);
+    root.add(body);
+
+    let portrait: Phaser.GameObjects.Image | undefined;
+    const spriteH = showArt ? BATTLE_PORTRAIT_SIZE : EMPTY_SLOT_H;
+    if (unit && hasPortrait(this, unit.portraitKey)) {
+      portrait = addPortrait(this, 0, 0, unit.portraitKey, BATTLE_PORTRAIT_SIZE, { x: 0.5, y: 1 });
+      if (unit.portraitKey === PORTRAIT.enemyHeartDemon) {
+        portrait.setTint(0xe8d6ff);
+      }
+      root.add(portrait);
+    }
 
     const weapon = unit?.isHero ? equippedWeaponName(this.save.equipment) : undefined;
     const title =
@@ -194,33 +214,42 @@ export class BattleScene extends Phaser.Scene {
           ? `${unit.name} · ${slot}`
           : `空位 ${slot}`;
     const nameText = this.add
-      .text(x, y - 38, title, {
+      .text(0, showArt ? -spriteH + 4 : -spriteH - 4, title, {
         fontFamily: FONT,
-        fontSize: "16px",
+        fontSize: "15px",
         color: unit ? COLORS.text : COLORS.muted,
+        stroke: unit ? "#120e18" : undefined,
+        strokeThickness: unit ? 4 : 0,
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, showArt ? 0 : 1);
+    root.add(nameText);
 
-    const hpBarBg = this.add.rectangle(x, y + 8, BAR_W, 10, COLORS.hpBg).setAlpha(unit ? 1 : 0);
-    const hpBar = this.add.rectangle(x - BAR_W / 2, y + 8, BAR_W, 10, COLORS.hp).setOrigin(0, 0.5);
+    const barY = showArt ? -22 : -12;
+    const hpBarBg = this.add.rectangle(0, barY, BAR_W, 10, COLORS.hpBg).setOrigin(0.5).setAlpha(unit ? 0.95 : 0);
+    const hpBar = this.add.rectangle(-BAR_W / 2, barY, BAR_W, 10, COLORS.hp).setOrigin(0, 0.5);
     hpBar.setAlpha(unit ? 1 : 0);
-    const atbBarBg = this.add.rectangle(x, y + 24, BAR_W, 8, COLORS.atbBg).setAlpha(unit ? 1 : 0);
-    const atbBar = this.add.rectangle(x - BAR_W / 2, y + 24, BAR_W, 8, COLORS.atb).setOrigin(0, 0.5);
+    const atbBarBg = this.add.rectangle(0, barY + 12, BAR_W, 8, COLORS.atbBg).setOrigin(0.5).setAlpha(unit ? 0.95 : 0);
+    const atbBar = this.add.rectangle(-BAR_W / 2, barY + 12, BAR_W, 8, COLORS.atb).setOrigin(0, 0.5);
     atbBar.setAlpha(unit ? 1 : 0);
     const hpText = this.add
-      .text(x, y + 44, unit ? `${unit.stats.hp}/${unit.stats.maxHp}` : "", {
+      .text(0, barY - 8, unit ? `${unit.stats.hp}/${unit.stats.maxHp}` : "", {
         fontFamily: FONT,
-        fontSize: "14px",
+        fontSize: "13px",
         color: COLORS.muted,
+        stroke: unit ? "#120e18" : undefined,
+        strokeThickness: unit ? 3 : 0,
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 1);
+    root.add([hpBarBg, hpBar, atbBarBg, atbBar, hpText]);
 
     const view: SlotView = {
       slot,
       side,
       rootX: x,
       rootY: y,
+      root,
       body,
+      portrait,
       nameText,
       hpBarBg,
       hpBar,
@@ -253,7 +282,9 @@ export class BattleScene extends Phaser.Scene {
             : `${unit.stats.hp}/${unit.stats.maxHp}`
           : "阵亡",
       );
-      view.body.setAlpha(unit.alive ? 1 : 0.35);
+      const fade = unit.alive ? 1 : 0.38;
+      view.body.setAlpha(fade);
+      view.portrait?.setAlpha(fade);
     }
   }
 
@@ -271,7 +302,7 @@ export class BattleScene extends Phaser.Scene {
 
     if (actorView) {
       this.tweens.add({
-        targets: actorView.body,
+        targets: actorView.root,
         scaleX: 1.08,
         scaleY: 1.08,
         yoyo: true,
@@ -290,7 +321,7 @@ export class BattleScene extends Phaser.Scene {
           continue;
         }
         if (segment.trigger === "miss") {
-          floaters.push({ x: view.rootX, y: view.rootY - 10, text: "闪避", color: COLORS.muted, scale: 1 });
+          floaters.push({ x: view.rootX, y: view.rootY - BATTLE_PORTRAIT_SIZE * 0.55, text: "闪避", color: COLORS.muted, scale: 1 });
         } else {
           const parts = [String(segment.damage)];
           if (segment.crit) {
@@ -301,7 +332,7 @@ export class BattleScene extends Phaser.Scene {
           }
           floaters.push({
             x: view.rootX,
-            y: view.rootY - 10,
+            y: view.rootY - BATTLE_PORTRAIT_SIZE * 0.55,
             text: parts.join(" "),
             color: segment.crit ? "#ffb347" : "#fff6d8",
             scale: segment.crit ? 1.25 : 1,
