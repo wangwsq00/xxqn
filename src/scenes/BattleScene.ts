@@ -3,6 +3,8 @@ import { ATB_MAX, SLOT_ORDER_TOP_TO_BOTTOM, TICK_MS } from "../combat/constants"
 import { createTrialEncounter } from "../combat/encounter";
 import { BattleEngine } from "../combat/engine";
 import type { ActionResult, Combatant, SlotIndex } from "../combat/types";
+import { equippedWeaponName, gearBonusFromEquipment, grantWoodenSwordIfMissing } from "../equip/state";
+import { loadSave, persistSave, type SaveData } from "../save/storage";
 import { COLORS, FONT } from "../ui/theme";
 
 interface SlotView {
@@ -24,6 +26,7 @@ const CARD_H = 118;
 const BAR_W = 120;
 
 export class BattleScene extends Phaser.Scene {
+  private save!: SaveData;
   private engine!: BattleEngine;
   private views = new Map<string, SlotView>();
   private slotViews: SlotView[] = [];
@@ -38,7 +41,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.engine = new BattleEngine(createTrialEncounter());
+    this.save = loadSave();
+    const gear = gearBonusFromEquipment(this.save.equipment);
+    this.engine = new BattleEngine(createTrialEncounter(gear));
     this.views.clear();
     this.slotViews = [];
     this.animating = false;
@@ -56,8 +61,11 @@ export class BattleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    const hero = this.engine.units.find((unit) => unit.isHero);
+    const weapon = equippedWeaponName(this.save.equipment);
+    const atkHint = weapon ? `${weapon} 攻击 ${hero?.stats.atk ?? 0}` : `未穿武器 攻击 ${hero?.stats.atk ?? 0}`;
     this.add
-      .text(width / 2, 90, "行动条自动战斗 · 位置 4-2-1-3-5 · 主角居中", {
+      .text(width / 2, 90, `行动条 · 主角居中 · ${atkHint}`, {
         fontFamily: FONT,
         fontSize: "16px",
         color: COLORS.muted,
@@ -134,8 +142,13 @@ export class BattleScene extends Phaser.Scene {
     const body = this.add.rectangle(x, y, CARD_W, CARD_H, fill, unit ? 1 : 0.35);
     body.setStrokeStyle(2, unit?.isHero ? 0xfff3c4 : 0x5a5478);
 
+    const weapon = unit?.isHero ? equippedWeaponName(this.save.equipment) : undefined;
     const title =
-      unit?.isHero && slot === 1 ? `${unit.name} · 中` : unit ? `${unit.name} · ${slot}` : `空位 ${slot}`;
+      unit?.isHero && slot === 1
+        ? `${unit.name} · ${weapon ?? "中"}`
+        : unit
+          ? `${unit.name} · ${slot}`
+          : `空位 ${slot}`;
     const nameText = this.add
       .text(x, y - 38, title, {
         fontFamily: FONT,
@@ -285,6 +298,15 @@ export class BattleScene extends Phaser.Scene {
     }
     this.ended = true;
     const win = this.engine.status === "victory";
+    let lootLine = "点击任意处返回洞府";
+    if (win) {
+      const loot = grantWoodenSwordIfMissing(this.save.equipment);
+      this.save = { ...this.save, equipment: loot.equipment };
+      persistSave(this.save);
+      lootLine = loot.granted
+        ? "获得 木剑（已放入背包）\n点击任意处返回洞府"
+        : "点击任意处返回洞府";
+    }
     const { width, height } = this.scale;
     const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.55);
     const banner = this.add
@@ -295,16 +317,19 @@ export class BattleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const sub = this.add
-      .text(width / 2, height / 2 + 20, "点击任意处返回洞府", {
+      .text(width / 2, height / 2 + 20, lootLine, {
         fontFamily: FONT,
         fontSize: "20px",
         color: COLORS.text,
+        align: "center",
       })
       .setOrigin(0.5);
     this.add.container(0, 0, [dim, banner, sub]);
     dim.setInteractive();
     dim.on("pointerdown", () => this.scene.start("Hub"));
-    this.statusText?.setText(win ? "试炼完成" : "再修炼一番吧");
+    this.statusText?.setText(
+      win ? (lootLine.startsWith("获得") ? "试炼完成 · 木剑已入包" : "试炼完成") : "再修炼一番吧",
+    );
   }
 
   private makeButton(x: number, y: number, label: string, onClick: () => void): void {

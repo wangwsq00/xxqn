@@ -102,12 +102,18 @@ export class HubScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.makeClaimButton(width / 2, 560);
-    this.makeButton(width / 2, 650, "进入试炼", () => {
+    this.makeButton(width / 2 - 190, 650, "装备", () => {
+      const { save } = accrueIdle(this.save);
+      this.save = save;
+      persistSave(this.save);
+      this.scene.start("Equip");
+    }, 280);
+    this.makeButton(width / 2 + 190, 650, "进入试炼", () => {
       const { save } = accrueIdle(this.save);
       this.save = save;
       persistSave(this.save);
       this.scene.start("Battle");
-    });
+    }, 280);
 
     this.add
       .text(width / 2, height - 72, "阵容：主角固定我方 1 号中位 · 5v5 空位可空", {
@@ -215,8 +221,8 @@ export class HubScene extends Phaser.Scene {
     this.claimLabel = text;
   }
 
-  private makeButton(x: number, y: number, label: string, onClick: () => void): void {
-    const bg = this.add.rectangle(x, y, 360, 72, COLORS.hero).setInteractive({ useHandCursor: true });
+  private makeButton(x: number, y: number, label: string, onClick: () => void, width = 360): void {
+    const bg = this.add.rectangle(x, y, width, 72, COLORS.hero).setInteractive({ useHandCursor: true });
     const text = this.add
       .text(x, y, label, {
         fontFamily: FONT,

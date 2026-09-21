@@ -5,6 +5,7 @@ import { BattleEngine } from "./engine";
 import { makeCombatant } from "./factory";
 import { pickPrimaryTarget } from "./targeting";
 import { rollHitSegments } from "./damage";
+import { WOODEN_SWORD_ATK } from "../equip/catalog";
 
 describe("trial encounter layout", () => {
   it("places the hero in the center ally slot and two enemies opposite", () => {
@@ -15,6 +16,13 @@ describe("trial encounter layout", () => {
     const enemies = units.filter((unit) => unit.side === "enemy");
     expect(enemies).toHaveLength(2);
     expect(enemies.map((unit) => unit.slot).sort()).toEqual([1, 2]);
+  });
+
+  it("raises hero ATK when a wooden sword bonus is applied", () => {
+    const bare = createTrialEncounter().find((unit) => unit.isHero);
+    const armed = createTrialEncounter({ atk: WOODEN_SWORD_ATK }).find((unit) => unit.isHero);
+    expect(bare?.stats.atk).toBe(100);
+    expect(armed?.stats.atk).toBe(100 + WOODEN_SWORD_ATK);
   });
 });
 
