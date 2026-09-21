@@ -3,7 +3,8 @@ import { ATB_MAX, SLOT_ORDER_TOP_TO_BOTTOM, TICK_MS } from "../combat/constants"
 import { createTrialEncounter } from "../combat/encounter";
 import { BattleEngine } from "../combat/engine";
 import type { ActionResult, Combatant, SlotIndex } from "../combat/types";
-import { equippedWeaponName, gearBonusFromEquipment, grantWoodenSwordIfMissing } from "../equip/state";
+import { applyTrialVictoryRewards, formatVictoryRewardText } from "../combat/rewards";
+import { equippedWeaponName, gearBonusFromEquipment } from "../equip/state";
 import { loadSave, persistSave, type SaveData } from "../save/storage";
 import { COLORS, FONT } from "../ui/theme";
 
@@ -65,7 +66,7 @@ export class BattleScene extends Phaser.Scene {
     const weapon = equippedWeaponName(this.save.equipment);
     const atkHint = weapon ? `${weapon} 攻击 ${hero?.stats.atk ?? 0}` : `未穿武器 攻击 ${hero?.stats.atk ?? 0}`;
     this.add
-      .text(width / 2, 90, `行动条 · 主角居中 · ${atkHint}`, {
+      .text(width / 2, 90, `行动条 · 主角居中 · ${atkHint} · 胜利奖励灵石`, {
         fontFamily: FONT,
         fontSize: "16px",
         color: COLORS.muted,
@@ -298,38 +299,37 @@ export class BattleScene extends Phaser.Scene {
     }
     this.ended = true;
     const win = this.engine.status === "victory";
-    let lootLine = "点击任意处返回洞府";
+    let lootLine = "无奖励\n点击任意处返回洞府";
+    let gainedStones = 0;
     if (win) {
-      const loot = grantWoodenSwordIfMissing(this.save.equipment);
-      this.save = { ...this.save, equipment: loot.equipment };
+      const result = applyTrialVictoryRewards(this.save);
+      this.save = result.save;
       persistSave(this.save);
-      lootLine = loot.granted
-        ? "获得 木剑（已放入背包）\n点击任意处返回洞府"
-        : "点击任意处返回洞府";
+      lootLine = formatVictoryRewardText(result.lines);
+      gainedStones = result.loot.stones;
     }
     const { width, height } = this.scale;
     const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.55);
     const banner = this.add
-      .text(width / 2, height / 2 - 40, win ? "战斗胜利" : "战斗失败", {
+      .text(width / 2, height / 2 - 56, win ? "战斗胜利" : "战斗失败", {
         fontFamily: FONT,
         fontSize: "48px",
         color: win ? COLORS.win : COLORS.lose,
       })
       .setOrigin(0.5);
     const sub = this.add
-      .text(width / 2, height / 2 + 20, lootLine, {
+      .text(width / 2, height / 2 + 16, lootLine, {
         fontFamily: FONT,
         fontSize: "20px",
         color: COLORS.text,
         align: "center",
+        lineSpacing: 8,
       })
       .setOrigin(0.5);
     this.add.container(0, 0, [dim, banner, sub]);
     dim.setInteractive();
     dim.on("pointerdown", () => this.scene.start("Hub"));
-    this.statusText?.setText(
-      win ? (lootLine.startsWith("获得") ? "试炼完成 · 木剑已入包" : "试炼完成") : "再修炼一番吧",
-    );
+    this.statusText?.setText(win ? `试炼完成 · 灵石 +${gainedStones}` : "再修炼一番吧");
   }
 
   private makeButton(x: number, y: number, label: string, onClick: () => void): void {
