@@ -119,7 +119,7 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(118, 128, "我方", {
+      .text(118, 108, "我方", {
         fontFamily: FONT,
         fontSize: "20px",
         color: "#7ec8e3",
@@ -127,7 +127,7 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width - 118, 128, "敌方", {
+      .text(width - 118, 108, "敌方", {
         fontFamily: FONT,
         fontSize: "20px",
         color: "#e08080",
@@ -214,14 +214,14 @@ export class BattleScene extends Phaser.Scene {
           ? `${unit.name} · ${slot}`
           : `空位 ${slot}`;
     const nameText = this.add
-      .text(0, -spriteH - 4, title, {
+      .text(0, showArt ? -spriteH + 4 : -spriteH - 4, title, {
         fontFamily: FONT,
         fontSize: "15px",
         color: unit ? COLORS.text : COLORS.muted,
         stroke: unit ? "#120e18" : undefined,
         strokeThickness: unit ? 4 : 0,
       })
-      .setOrigin(0.5, 1);
+      .setOrigin(0.5, showArt ? 0 : 1);
     root.add(nameText);
 
     const barY = showArt ? -22 : -12;
