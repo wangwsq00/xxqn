@@ -10,6 +10,23 @@ export const QI_PER_SECOND_BY_MAJOR = [1, 2, 4, 8, 16, 32, 64, 128, 256] as cons
 /** 聚灵阵每级灵气加成。1 级 = +10%。未购买为 0 级。 */
 export const GATHERING_ARRAY_BONUS_PER_LEVEL = 0.1;
 
+/** 聚灵阵最高等级。权威口径：`01_角色系统.md`。 */
+export const MAX_GATHERING_LEVEL = 10;
+
+/**
+ * 升到该级所需灵石。下标 0 = 布置 1 级。
+ * 权威口径：`01_角色系统.md` 聚灵阵价格表。
+ */
+export const GATHERING_LEVEL_COSTS = [
+  100, 500, 2_000, 8_000, 30_000, 100_000, 300_000, 800_000, 2_000_000, 5_000_000,
+] as const;
+
+/**
+ * 开局灵石仓库未写。M1 **工程默认**：新档赠送 600，刚好可买 1 级并升到 2 级，
+ * 用于验证购买/升级闭环；2 级以上仍按上表。不是聊天稿数值。
+ */
+export const STARTER_STONES = 600;
+
 /**
  * M1 洞府闲修灵石产出（工程默认）。
  *

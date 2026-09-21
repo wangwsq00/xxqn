@@ -1,4 +1,6 @@
 import { starterEquipment, migrateEquipment } from "../equip/state";
+import { STARTER_STONES } from "../idle/constants";
+import { clampGatheringLevel } from "../idle/gathering";
 import { accrueIdle } from "../idle/settle";
 import type { SaveData } from "./types";
 
@@ -14,7 +16,7 @@ export function defaultSave(now = Date.now()): SaveData {
       realmMajor: 1,
       realmLayer: 1,
       lingqi: 0,
-      stones: 0,
+      stones: STARTER_STONES,
       gatheringArrayLevel: 0,
     },
     idle: {
@@ -49,7 +51,7 @@ export function migrateSave(raw: unknown, now = Date.now()): SaveData | null {
       realmLayer: parsed.player.realmLayer ?? 1,
       lingqi: parsed.player.lingqi ?? 0,
       stones: parsed.player.stones ?? 0,
-      gatheringArrayLevel: parsed.player.gatheringArrayLevel ?? 0,
+      gatheringArrayLevel: clampGatheringLevel(parsed.player.gatheringArrayLevel ?? 0),
     },
     idle: {
       lastSettleAt,

@@ -1,5 +1,6 @@
 import {
   GATHERING_ARRAY_BONUS_PER_LEVEL,
+  MAX_GATHERING_LEVEL,
   QI_PER_SECOND_BY_MAJOR,
   STONES_PER_MINUTE_LIANQI,
 } from "./constants";
@@ -18,7 +19,7 @@ function realmMultiplier(realmMajor: number): number {
 /** 聚灵阵加成比例：1 级 = 0.1。 */
 export function gatheringBonus(gatheringArrayLevel: number): number {
   const level = Number.isFinite(gatheringArrayLevel) ? Math.max(0, Math.floor(gatheringArrayLevel)) : 0;
-  return level * GATHERING_ARRAY_BONUS_PER_LEVEL;
+  return Math.min(MAX_GATHERING_LEVEL, level) * GATHERING_ARRAY_BONUS_PER_LEVEL;
 }
 
 /** 实际灵气/秒 = 基础灵气/秒 × (1 + 聚灵阵加成)。 */

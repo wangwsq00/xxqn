@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WOODEN_SWORD_DEF_ID } from "../equip/catalog";
 import { starterEquipment } from "../equip/state";
-import { loadSave, migrateSave, persistSave, SAVE_KEY } from "./storage";
+import { STARTER_STONES } from "../idle/constants";
+import { defaultSave, loadSave, migrateSave, persistSave, SAVE_KEY } from "./storage";
 
 function memoryStorage() {
   const data = new Map<string, string>();
@@ -19,6 +20,12 @@ function memoryStorage() {
 describe("save migrate and load", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("gives new saves M1 starter stones and no gathering array", () => {
+    const save = defaultSave(1000);
+    expect(save.player.stones).toBe(STARTER_STONES);
+    expect(save.player.gatheringArrayLevel).toBe(0);
   });
 
   it("fills idle fields for the M1 stub save shape", () => {
