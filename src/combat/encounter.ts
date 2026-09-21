@@ -1,17 +1,17 @@
 import { makeCombatant, makeHero, realmBaseStat } from "../combat/factory";
-import type { Combatant } from "../combat/types";
-import { SEVEN_STAR_SWORD } from "../data/skills";
+import type { Combatant, EquippedSkill } from "../combat/types";
 import { EMPTY_GEAR } from "../equip/catalog";
 import type { GearBonus } from "../equip/types";
 
 export type BattleMode = "trial" | "heartDemon";
 
-/** M1 试炼：主角居中，对位 2 名敌人（1 号、2 号）。 */
+/** M1 试炼：主角居中，对位 2 名敌人（1 号、2 号）。功法由存档槽位传入，未装备则只普攻。 */
 export function createTrialEncounter(
   gear: Partial<GearBonus> = EMPTY_GEAR,
   realmMajor = 1,
+  skills: EquippedSkill[] = [],
 ): Combatant[] {
-  const hero = makeHero([{ def: SEVEN_STAR_SWORD, cooldownRemaining: 0 }], gear, realmMajor);
+  const hero = makeHero(skills, gear, realmMajor);
   const gruntA = makeCombatant({
     id: "enemy-1",
     name: "野修甲",
@@ -60,8 +60,9 @@ export function createTrialEncounter(
 export function createHeartDemonEncounter(
   gear: Partial<GearBonus> = EMPTY_GEAR,
   realmMajor = 1,
+  skills: EquippedSkill[] = [],
 ): Combatant[] {
-  const hero = makeHero([{ def: SEVEN_STAR_SWORD, cooldownRemaining: 0 }], gear, realmMajor);
+  const hero = makeHero(skills, gear, realmMajor);
   const base = realmBaseStat(realmMajor);
   const hp = Math.round(base * 2.0);
   const demon = makeCombatant({

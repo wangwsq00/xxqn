@@ -54,6 +54,7 @@ export class BattleEngine {
     ready.sort(compareReady);
     const actor = ready[0];
     actor.atb = 0;
+    this.tickShield(actor);
     const result = this.resolveAction(actor);
     this.refreshStatus();
     return result;
@@ -70,10 +71,58 @@ export class BattleEngine {
     return null;
   }
 
+  private tickShield(actor: Combatant): void {
+    if (actor.shieldTurns <= 0) {
+      return;
+    }
+    actor.shieldTurns -= 1;
+    if (actor.shieldTurns <= 0) {
+      actor.shieldHp = 0;
+      actor.shieldTurns = 0;
+    }
+  }
+
+  private applyDamage(target: Combatant, incoming: number): number {
+    let remaining = incoming;
+    if (target.shieldHp > 0 && remaining > 0) {
+      const absorbed = Math.min(target.shieldHp, remaining);
+      target.shieldHp -= absorbed;
+      remaining -= absorbed;
+    }
+    if (remaining > 0 && target.alive) {
+      target.stats.hp = Math.max(0, target.stats.hp - remaining);
+      if (target.stats.hp <= 0) {
+        target.alive = false;
+        target.atb = 0;
+        target.shieldHp = 0;
+        target.shieldTurns = 0;
+      }
+    }
+    return incoming;
+  }
+
   private resolveAction(actor: Combatant): ActionResult {
     tickCooldowns(actor);
     const selected = selectSkill(actor);
     startCooldown(selected);
+
+    if (!selected.isBasicAttack && selected.def.kind === "guard") {
+      const ratio = selected.def.shieldRatio ?? 0.2;
+      const duration = selected.def.shieldDurationTurns ?? 3;
+      actor.shieldHp = Math.round(actor.stats.maxHp * ratio);
+      actor.shieldTurns = duration;
+      this.log.push(`${actor.name} 施展「${selected.def.name}」`);
+      if (this.log.length > 40) {
+        this.log.shift();
+      }
+      return {
+        actorId: actor.id,
+        skillName: selected.def.name,
+        isBasicAttack: false,
+        targets: [],
+      };
+    }
+
     const targets = pickTargets(actor, this.units, selected.def.pattern, this.rng);
     const targetResults: TargetResult[] = [];
 
@@ -85,12 +134,7 @@ export class BattleEngine {
       let total = 0;
       for (const segment of segments) {
         if (segment.trigger === "hit" && segment.damage > 0 && target.alive) {
-          target.stats.hp = Math.max(0, target.stats.hp - segment.damage);
-          total += segment.damage;
-          if (target.stats.hp <= 0) {
-            target.alive = false;
-            target.atb = 0;
-          }
+          total += this.applyDamage(target, segment.damage);
         }
       }
       targetResults.push({ targetId: target.id, segments, totalDamage: total });

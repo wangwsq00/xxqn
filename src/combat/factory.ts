@@ -1,5 +1,6 @@
 import { EMPTY_GEAR } from "../equip/catalog";
 import type { GearBonus } from "../equip/types";
+import { gongfaStatBonus } from "../gongfa/state";
 import { CENTER_SLOT } from "./constants";
 import type { CombatStats, Combatant, EquippedSkill, SlotIndex } from "./types";
 
@@ -74,6 +75,8 @@ export function makeCombatant(params: {
     silenced: false,
     alive: true,
     isHero: params.isHero ?? false,
+    shieldHp: 0,
+    shieldTurns: 0,
   };
 }
 
@@ -82,12 +85,23 @@ export function makeHero(
   gear: Partial<GearBonus> = EMPTY_GEAR,
   realmMajor = 1,
 ): Combatant {
+  const bonus = gongfaStatBonus(skills);
   return makeCombatant({
     id: "hero",
     name: "主角",
     side: "ally",
     slot: CENTER_SLOT,
-    stats: deriveCombatStats(realmMajor, DEFAULT_APTITUDES, gear),
+    stats: deriveCombatStats(
+      realmMajor,
+      DEFAULT_APTITUDES,
+      {
+        atk: (gear.atk ?? 0) + bonus.atk,
+        def: (gear.def ?? 0) + bonus.def,
+        hp: gear.hp ?? 0,
+        spd: gear.spd ?? 0,
+      },
+      { crit: 10 + bonus.crit },
+    ),
     skills,
     isHero: true,
   });

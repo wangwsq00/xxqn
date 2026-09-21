@@ -9,6 +9,7 @@ import { BattleEngine } from "../combat/engine";
 import type { ActionResult, Combatant, SlotIndex } from "../combat/types";
 import { applyTrialVictoryRewards, formatVictoryRewardText } from "../combat/rewards";
 import { equippedWeaponName, gearBonusFromEquipment } from "../equip/state";
+import { combatSkillsFromGongfa } from "../gongfa/state";
 import { applyHeartDemonDefeat, applyHeartDemonVictory } from "../realm/breakthrough";
 import { realmLabel } from "../realm/label";
 import { loadSave, persistSave, type SaveData } from "../save/storage";
@@ -56,10 +57,11 @@ export class BattleScene extends Phaser.Scene {
     this.save = loadSave();
     const gear = gearBonusFromEquipment(this.save.equipment);
     const realmMajor = this.save.player.realmMajor;
+    const skills = combatSkillsFromGongfa(this.save.gongfa);
     this.engine = new BattleEngine(
       this.mode === "heartDemon"
-        ? createHeartDemonEncounter(gear, realmMajor)
-        : createTrialEncounter(gear, realmMajor),
+        ? createHeartDemonEncounter(gear, realmMajor, skills)
+        : createTrialEncounter(gear, realmMajor, skills),
     );
     this.views.clear();
     this.slotViews = [];
@@ -82,12 +84,16 @@ export class BattleScene extends Phaser.Scene {
     const hero = this.engine.units.find((unit) => unit.isHero);
     const weapon = equippedWeaponName(this.save.equipment);
     const atkHint = weapon ? `${weapon} 攻击 ${hero?.stats.atk ?? 0}` : `未穿武器 攻击 ${hero?.stats.atk ?? 0}`;
+    const skillHint =
+      hero && hero.skills.length > 0
+        ? `功法 ${hero.skills.map((skill) => skill.def.name).join("、")}`
+        : "未装备功法（普攻）";
     const modeHint =
       this.mode === "heartDemon" ? "战胜即可破境" : "胜利奖励灵石";
     this.add
-      .text(width / 2, 90, `行动条 · 主角居中 · ${atkHint} · ${modeHint}`, {
+      .text(width / 2, 90, `行动条 · ${atkHint} · ${skillHint} · ${modeHint}`, {
         fontFamily: FONT,
-        fontSize: "16px",
+        fontSize: "15px",
         color: COLORS.muted,
       })
       .setOrigin(0.5);
@@ -222,7 +228,13 @@ export class BattleScene extends Phaser.Scene {
       const atbRatio = unit.alive ? unit.atb / ATB_MAX : 0;
       view.hpBar.scaleX = Math.max(0, hpRatio);
       view.atbBar.scaleX = Math.max(0, Math.min(1, atbRatio));
-      view.hpText.setText(unit.alive ? `${unit.stats.hp}/${unit.stats.maxHp}` : "阵亡");
+      view.hpText.setText(
+        unit.alive
+          ? unit.shieldHp > 0
+            ? `${unit.stats.hp}/${unit.stats.maxHp} 盾${unit.shieldHp}`
+            : `${unit.stats.hp}/${unit.stats.maxHp}`
+          : "阵亡",
+      );
       view.body.setAlpha(unit.alive ? 1 : 0.35);
     }
   }

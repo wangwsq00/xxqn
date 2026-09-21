@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { ATB_MAX, CENTER_SLOT } from "./constants";
 import { createTrialEncounter } from "./encounter";
 import { BattleEngine } from "./engine";
-import { makeCombatant } from "./factory";
+import { makeCombatant, makeHero } from "./factory";
 import { pickPrimaryTarget } from "./targeting";
 import { rollHitSegments } from "./damage";
 import { WOODEN_SWORD_ATK } from "../equip/catalog";
+import { HEAVENLY_GUARD, SEVEN_STAR_SWORD } from "../gongfa/catalog";
 
 describe("trial encounter layout", () => {
   it("places the hero in the center ally slot and two enemies opposite", () => {
@@ -107,5 +108,72 @@ describe("ATB battle", () => {
     expect(hero?.slot).toBe(CENTER_SLOT);
     const readyOverflow = engine.living().every((unit) => unit.atb <= ATB_MAX);
     expect(readyOverflow).toBe(true);
+  });
+
+  it("uses 普通攻击 when no gongfa is equipped", () => {
+    const engine = new BattleEngine(createTrialEncounter(), () => 0.01);
+    let firstHero: string | undefined;
+    for (let i = 0; i < 400 && !firstHero; i += 1) {
+      const result = engine.tick();
+      if (result?.actorId === "hero") {
+        firstHero = result.skillName;
+      }
+    }
+    expect(firstHero).toBe("普通攻击");
+  });
+
+  it("casts 七星剑阵 when ready then falls back to 普通攻击 on cooldown", () => {
+    const engine = new BattleEngine(
+      createTrialEncounter({}, 1, [{ def: SEVEN_STAR_SWORD, cooldownRemaining: 0 }]),
+      () => 0.01,
+    );
+    const heroNames: string[] = [];
+    for (let i = 0; i < 2000 && heroNames.length < 2 && engine.status === "ongoing"; i += 1) {
+      const result = engine.tick();
+      if (result?.actorId === "hero") {
+        heroNames.push(result.skillName);
+      }
+    }
+    expect(heroNames[0]).toBe("七星剑阵");
+    expect(heroNames[1]).toBe("普通攻击");
+  });
+});
+
+describe("guard gongfa", () => {
+  it("applies 天罡护体 shield instead of attacking", () => {
+    const hero = makeHero([{ def: HEAVENLY_GUARD, cooldownRemaining: 0 }]);
+    const dummy = makeCombatant({
+      id: "e1",
+      name: "靶",
+      side: "enemy",
+      slot: 1,
+      stats: {
+        hp: 500,
+        maxHp: 500,
+        atk: 1,
+        def: 0,
+        spd: 1,
+        hit: 100,
+        dodge: 0,
+        crit: 0,
+        critResist: 0,
+        block: 0,
+        blockResist: 0,
+      },
+    });
+    const engine = new BattleEngine([hero, dummy], () => 0.01);
+    let guard: ReturnType<BattleEngine["tick"]> = null;
+    for (let i = 0; i < 400 && !guard; i += 1) {
+      const result = engine.tick();
+      if (result?.actorId === "hero") {
+        guard = result;
+      }
+    }
+    expect(guard?.skillName).toBe("天罡护体");
+    expect(guard?.isBasicAttack).toBe(false);
+    expect(guard?.targets).toHaveLength(0);
+    expect(dummy.stats.hp).toBe(500);
+    expect(hero.shieldHp).toBe(Math.round(hero.stats.maxHp * 0.2));
+    expect(hero.shieldTurns).toBe(3);
   });
 });

@@ -137,18 +137,24 @@ export class HubScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.makeClaimButton(width / 2, 580);
-    this.makeButton(width / 2 - 190, 650, "聚灵阵", () => {
+    this.makeButton(width / 2 - 220, 650, "聚灵阵", () => {
       const { save } = accrueIdle(this.save);
       this.save = save;
       persistSave(this.save);
       this.scene.start("Gathering");
-    }, 280);
-    this.makeButton(width / 2 + 190, 650, "装备", () => {
+    }, 200);
+    this.makeButton(width / 2, 650, "装备", () => {
       const { save } = accrueIdle(this.save);
       this.save = save;
       persistSave(this.save);
       this.scene.start("Equip");
-    }, 280);
+    }, 200);
+    this.makeButton(width / 2 + 220, 650, "功法", () => {
+      const { save } = accrueIdle(this.save);
+      this.save = save;
+      persistSave(this.save);
+      this.scene.start("Gongfa");
+    }, 200);
     this.makeButton(width / 2 - 190, 740, "进入试炼", () => {
       this.persistThenBattle("trial");
     }, 280);

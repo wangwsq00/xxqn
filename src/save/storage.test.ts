@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WOODEN_SWORD_DEF_ID } from "../equip/catalog";
 import { starterEquipment } from "../equip/state";
+import { QIXING_JIANZHEN_ID, TIANGANG_HUTI_ID } from "../gongfa/catalog";
+import { starterGongfa } from "../gongfa/state";
 import { STARTER_STONES } from "../idle/constants";
 import { defaultSave, loadSave, migrateSave, persistSave, SAVE_KEY } from "./storage";
 
@@ -26,6 +28,8 @@ describe("save migrate and load", () => {
     const save = defaultSave(1000);
     expect(save.player.stones).toBe(STARTER_STONES);
     expect(save.player.gatheringArrayLevel).toBe(0);
+    expect(save.gongfa.owned).toEqual([QIXING_JIANZHEN_ID, TIANGANG_HUTI_ID]);
+    expect(save.gongfa.slots).toEqual([null, null, null, null]);
   });
 
   it("fills idle fields for the M1 stub save shape", () => {
@@ -40,6 +44,8 @@ describe("save migrate and load", () => {
     expect(migrated?.player.stones).toBe(3);
     expect(migrated?.equipment.items[0]?.defId).toBe(WOODEN_SWORD_DEF_ID);
     expect(migrated?.equipment.equipped.weapon).toBeUndefined();
+    expect(migrated?.gongfa.owned).toEqual([QIXING_JIANZHEN_ID, TIANGANG_HUTI_ID]);
+    expect(migrated?.gongfa.slots).toEqual([null, null, null, null]);
   });
 
   it("accrues offline pending into LocalStorage on load", () => {
@@ -63,6 +69,7 @@ describe("save migrate and load", () => {
           lastOfflineSeconds: 0,
         },
         equipment: starterEquipment(),
+        gongfa: starterGongfa(),
       },
       0,
     );
@@ -73,6 +80,7 @@ describe("save migrate and load", () => {
     const stored = JSON.parse(storage.getItem(SAVE_KEY) ?? "{}");
     expect(stored.idle.pendingLingqi).toBe(120);
     expect(stored.equipment.items[0].defId).toBe(WOODEN_SWORD_DEF_ID);
+    expect(stored.gongfa.owned).toContain(QIXING_JIANZHEN_ID);
   });
 
   it("auto-applies small-layer ups from stored lingqi on load", () => {
@@ -96,6 +104,7 @@ describe("save migrate and load", () => {
           lastOfflineSeconds: 0,
         },
         equipment: starterEquipment(),
+        gongfa: starterGongfa(),
       },
       50,
     );
@@ -128,6 +137,7 @@ describe("save migrate and load", () => {
           lastOfflineSeconds: 0,
         },
         equipment: starterEquipment(),
+        gongfa: starterGongfa(),
       },
       80,
     );
