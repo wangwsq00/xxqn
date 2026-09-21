@@ -7,6 +7,8 @@ import { pickPrimaryTarget } from "./targeting";
 import { rollHitSegments } from "./damage";
 import { WOODEN_SWORD_ATK } from "../equip/catalog";
 import { HEAVENLY_GUARD, SEVEN_STAR_SWORD } from "../gongfa/catalog";
+import { STARTER_PET_ID } from "../pet/catalog";
+import { equipPet, equippedPetCombatant, starterPets } from "../pet/state";
 
 describe("trial encounter layout", () => {
   it("places the hero in the center ally slot and two enemies opposite", () => {
@@ -156,6 +158,23 @@ describe("ATB battle", () => {
     expect(heroNames[0]).toBe("七星剑阵");
     expect(heroNames[1]).toBe("天罡护体");
     expect(heroNames[2]).toBe("普通攻击");
+  });
+
+  it("lets equipped 灵狐 act with 普通攻击 while the hero stays center", () => {
+    const pet = equippedPetCombatant(equipPet(starterPets(), STARTER_PET_ID), 1);
+    const engine = new BattleEngine(createTrialEncounter({}, 1, [], 1, pet ? [pet] : []), () => 0.01);
+    const petNames: string[] = [];
+    for (let i = 0; i < 2000 && petNames.length < 1 && engine.status === "ongoing"; i += 1) {
+      const result = engine.tick();
+      if (result?.actorId === "pet-linghu") {
+        petNames.push(result.skillName);
+      }
+    }
+    expect(petNames[0]).toBe("普通攻击");
+    const hero = engine.units.find((unit) => unit.isHero);
+    const fox = engine.units.find((unit) => unit.id === "pet-linghu");
+    expect(hero?.slot).toBe(CENTER_SLOT);
+    expect(fox?.slot).toBe(2);
   });
 });
 

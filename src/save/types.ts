@@ -1,9 +1,11 @@
 import type { SaveGongfa } from "../gongfa/types";
 import type { SaveEquipment } from "../equip/types";
+import type { SavePet } from "../pet/types";
 import type { SaveTrial } from "../trial/types";
 
 export type { SaveEquipment } from "../equip/types";
 export type { SaveGongfa } from "../gongfa/types";
+export type { SavePet } from "../pet/types";
 export type { SaveTrial } from "../trial/types";
 
 export interface SavePlayer {
@@ -32,4 +34,5 @@ export interface SaveData {
   equipment: SaveEquipment;
   gongfa: SaveGongfa;
   trial: SaveTrial;
+  pets: SavePet;
 }

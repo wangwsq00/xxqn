@@ -3,6 +3,8 @@ import { WOODEN_SWORD_DEF_ID } from "../equip/catalog";
 import { starterEquipment } from "../equip/state";
 import { QIXING_JIANZHEN_ID, TIANGANG_HUTI_ID } from "../gongfa/catalog";
 import { starterGongfa } from "../gongfa/state";
+import { STARTER_PET_ID } from "../pet/catalog";
+import { starterPets } from "../pet/state";
 import { STARTER_STONES } from "../idle/constants";
 import { starterTrial } from "../trial/state";
 import { defaultSave, loadSave, migrateSave, persistSave, SAVE_KEY } from "./storage";
@@ -31,6 +33,8 @@ describe("save migrate and load", () => {
     expect(save.player.gatheringArrayLevel).toBe(0);
     expect(save.gongfa.owned).toEqual([QIXING_JIANZHEN_ID, TIANGANG_HUTI_ID]);
     expect(save.gongfa.slots).toEqual([null, null, null, null]);
+    expect(save.pets.owned).toEqual([STARTER_PET_ID]);
+    expect(save.pets.equippedId).toBeNull();
   });
 
   it("fills idle fields for the M1 stub save shape", () => {
@@ -48,6 +52,8 @@ describe("save migrate and load", () => {
     expect(migrated?.gongfa.owned).toEqual([QIXING_JIANZHEN_ID, TIANGANG_HUTI_ID]);
     expect(migrated?.gongfa.slots).toEqual([null, null, null, null]);
     expect(migrated?.trial.highestCleared).toBe(0);
+    expect(migrated?.pets.owned).toEqual([STARTER_PET_ID]);
+    expect(migrated?.pets.equippedId).toBeNull();
   });
 
   it("accrues offline pending into LocalStorage on load", () => {
@@ -73,6 +79,7 @@ describe("save migrate and load", () => {
         equipment: starterEquipment(),
         gongfa: starterGongfa(),
         trial: starterTrial(),
+        pets: starterPets(),
       },
       0,
     );
@@ -84,6 +91,7 @@ describe("save migrate and load", () => {
     expect(stored.idle.pendingLingqi).toBe(120);
     expect(stored.equipment.items[0].defId).toBe(WOODEN_SWORD_DEF_ID);
     expect(stored.gongfa.owned).toContain(QIXING_JIANZHEN_ID);
+    expect(stored.pets.owned).toContain(STARTER_PET_ID);
   });
 
   it("auto-applies small-layer ups from stored lingqi on load", () => {
@@ -109,6 +117,7 @@ describe("save migrate and load", () => {
         equipment: starterEquipment(),
         gongfa: starterGongfa(),
         trial: starterTrial(),
+        pets: starterPets(),
       },
       50,
     );
@@ -143,6 +152,7 @@ describe("save migrate and load", () => {
         equipment: starterEquipment(),
         gongfa: starterGongfa(),
         trial: starterTrial(),
+        pets: starterPets(),
       },
       80,
     );
@@ -166,5 +176,21 @@ describe("save migrate and load", () => {
     expect(loaded.trial.highestCleared).toBe(2);
     const stored = JSON.parse(storage.getItem(SAVE_KEY) ?? "{}");
     expect(stored.trial.highestCleared).toBe(2);
+  });
+
+  it("keeps equipped 灵狐 across load", () => {
+    const storage = memoryStorage();
+    vi.stubGlobal("localStorage", storage);
+    persistSave(
+      {
+        ...defaultSave(110),
+        pets: { owned: [STARTER_PET_ID], equippedId: STARTER_PET_ID },
+      },
+      110,
+    );
+    const loaded = loadSave(110);
+    expect(loaded.pets.equippedId).toBe(STARTER_PET_ID);
+    const stored = JSON.parse(storage.getItem(SAVE_KEY) ?? "{}");
+    expect(stored.pets.equippedId).toBe(STARTER_PET_ID);
   });
 });
