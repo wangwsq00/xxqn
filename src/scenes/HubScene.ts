@@ -259,7 +259,7 @@ export class HubScene extends Phaser.Scene {
 
   private drawHubPortraits(width: number): void {
     const size = HUB_PORTRAIT_SIZE;
-    const y = 92;
+    const y = 78;
     const hero = addFramedPortrait(this, 92, y, PORTRAIT.playerHero, size, {
       stroke: 0xfff3c4,
       fill: COLORS.hero,
@@ -267,7 +267,7 @@ export class HubScene extends Phaser.Scene {
     hero.frame.setDepth(2);
     hero.portrait?.setDepth(3);
     this.add
-      .text(92, y + size / 2 + 16, "主角", {
+      .text(92, y + size / 2 + 14, "主角", {
         fontFamily: FONT,
         fontSize: "14px",
         color: COLORS.text,
@@ -283,7 +283,7 @@ export class HubScene extends Phaser.Scene {
     petView.frame.setDepth(2);
     petView.portrait?.setDepth(3);
     this.add
-      .text(width - 92, y + size / 2 + 16, pet ? pet.name : "灵宠未出战", {
+      .text(width - 92, y + size / 2 + 14, pet ? pet.name : "灵宠未出战", {
         fontFamily: FONT,
         fontSize: "14px",
         color: pet ? COLORS.text : COLORS.muted,

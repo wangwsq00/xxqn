@@ -16,7 +16,7 @@ import { realmLabel } from "../realm/label";
 import { loadSave, persistSave, type SaveData } from "../save/storage";
 import { getTrialStage } from "../trial/catalog";
 import { isTrialStageUnlocked } from "../trial/state";
-import { BATTLE_PORTRAIT_SIZE } from "../assets/portraits";
+import { BATTLE_PORTRAIT_SIZE, PORTRAIT } from "../assets/portraits";
 import { addPortrait, hasPortrait } from "../ui/portraitView";
 import { COLORS, FONT } from "../ui/theme";
 
@@ -134,8 +134,8 @@ export class BattleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const startY = 196;
-    const gap = 136;
+    const startY = 200;
+    const gap = 148;
     SLOT_ORDER_TOP_TO_BOTTOM.forEach((slot, index) => {
       const y = startY + index * gap;
       this.drawSlot("ally", slot, 150, y);
@@ -194,11 +194,12 @@ export class BattleScene extends Phaser.Scene {
 
     let portrait: Phaser.GameObjects.Image | undefined;
     if (unit && hasPortrait(this, unit.portraitKey)) {
-      body.setFillStyle(0x14101c, 1);
-      portrait = addPortrait(this, 0, -6, unit.portraitKey, BATTLE_PORTRAIT_SIZE);
+      body.setFillStyle(unit.portraitKey === PORTRAIT.enemyHeartDemon ? 0x2c1848 : 0x14101c, 1);
+      portrait = addPortrait(this, 0, 8, unit.portraitKey, BATTLE_PORTRAIT_SIZE - 12);
       root.add(portrait);
-      const barShade = this.add.rectangle(0, CARD_H / 2 - 22, CARD_W - 4, 44, 0x000000, 0.42);
-      root.add(barShade);
+      const nameShade = this.add.rectangle(0, -CARD_H / 2 + 12, CARD_W - 4, 22, 0x000000, 0.45);
+      const barShade = this.add.rectangle(0, CARD_H / 2 - 22, CARD_W - 4, 44, 0x000000, 0.5);
+      root.add([nameShade, barShade]);
     }
 
     const weapon = unit?.isHero ? equippedWeaponName(this.save.equipment) : undefined;
