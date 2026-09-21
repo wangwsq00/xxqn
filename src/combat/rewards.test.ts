@@ -38,6 +38,7 @@ describe("trial victory rewards", () => {
     expect(first.save.player.lingqi).toBe(save.player.lingqi);
     expect(first.save.player.gatheringArrayLevel).toBe(0);
     expect(first.save.idle).toEqual(save.idle);
+    expect(first.save.gongfa).toEqual(save.gongfa);
     expect(first.lines[0]).toBe(`获得 灵石 ${TRIAL_VICTORY_STONES}`);
     expect(first.lines[1]).toBe(`现有灵石 ${STARTER_STONES + TRIAL_VICTORY_STONES}`);
 

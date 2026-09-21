@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CENTER_SLOT } from "./constants";
 import { createHeartDemonEncounter, createTrialEncounter } from "./encounter";
 import { WOODEN_SWORD_ATK } from "../equip/catalog";
+import { SEVEN_STAR_SWORD } from "../gongfa/catalog";
 
 describe("createHeartDemonEncounter", () => {
   it("places the hero in the center slot opposite a single 心魔", () => {
@@ -29,5 +30,13 @@ describe("createTrialEncounter realm stats", () => {
   it("keeps 炼气 hero atk 100 and raises 筑基 to 150", () => {
     expect(createTrialEncounter().find((unit) => unit.isHero)?.stats.atk).toBe(100);
     expect(createTrialEncounter({}, 2).find((unit) => unit.isHero)?.stats.atk).toBe(150);
+  });
+
+  it("applies 七星剑阵 passive ATK when the skill is equipped", () => {
+    const hero = createTrialEncounter({}, 1, [{ def: SEVEN_STAR_SWORD, cooldownRemaining: 0 }]).find(
+      (unit) => unit.isHero,
+    );
+    expect(hero?.stats.atk).toBe(150);
+    expect(hero?.skills[0]?.def.name).toBe("七星剑阵");
   });
 });

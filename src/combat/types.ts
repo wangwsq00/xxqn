@@ -13,6 +13,8 @@ export interface SkillHit {
   triggerChance: number;
 }
 
+export type SkillKind = "attack" | "guard";
+
 export interface SkillDef {
   id: string;
   name: string;
@@ -20,6 +22,12 @@ export interface SkillDef {
   /** 以「该单位自身行动次数」计的冷却。普攻为 0。 */
   cooldownTurns: number;
   hits: SkillHit[];
+  kind?: SkillKind;
+  bonusAtk?: number;
+  bonusDef?: number;
+  bonusCrit?: number;
+  shieldRatio?: number;
+  shieldDurationTurns?: number;
 }
 
 export interface CombatStats {
@@ -53,6 +61,9 @@ export interface Combatant {
   silenced: boolean;
   alive: boolean;
   isHero: boolean;
+  shieldHp: number;
+  /** 剩余持续：持有者自身行动次数（不含施放当次）。 */
+  shieldTurns: number;
 }
 
 export interface DamageSegment {
