@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { WOODEN_SWORD_DEF_ID } from "../equip/catalog";
+import { starterEquipment } from "../equip/state";
 import { loadSave, migrateSave, persistSave, SAVE_KEY } from "./storage";
 
 function memoryStorage() {
@@ -29,6 +31,8 @@ describe("save migrate and load", () => {
     expect(migrated?.player.gatheringArrayLevel).toBe(0);
     expect(migrated?.player.lingqi).toBe(12);
     expect(migrated?.player.stones).toBe(3);
+    expect(migrated?.equipment.items[0]?.defId).toBe(WOODEN_SWORD_DEF_ID);
+    expect(migrated?.equipment.equipped.weapon).toBeUndefined();
   });
 
   it("accrues offline pending into LocalStorage on load", () => {
@@ -51,6 +55,7 @@ describe("save migrate and load", () => {
           pendingStones: 0,
           lastOfflineSeconds: 0,
         },
+        equipment: starterEquipment(),
       },
       0,
     );
@@ -60,5 +65,6 @@ describe("save migrate and load", () => {
     expect(loaded.player.lingqi).toBe(0);
     const stored = JSON.parse(storage.getItem(SAVE_KEY) ?? "{}");
     expect(stored.idle.pendingLingqi).toBe(120);
+    expect(stored.equipment.items[0].defId).toBe(WOODEN_SWORD_DEF_ID);
   });
 });

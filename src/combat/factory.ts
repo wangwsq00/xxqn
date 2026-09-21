@@ -1,3 +1,5 @@
+import { EMPTY_GEAR } from "../equip/catalog";
+import type { GearBonus } from "../equip/types";
 import { CENTER_SLOT } from "./constants";
 import type { CombatStats, Combatant, EquippedSkill, SlotIndex } from "./types";
 
@@ -25,13 +27,18 @@ export function realmBaseStat(realmMajor: number): number {
 export function deriveCombatStats(
   realmMajor: number,
   aptitudes: Aptitudes = DEFAULT_APTITUDES,
+  gear: Partial<GearBonus> = EMPTY_GEAR,
   extras?: Partial<Pick<CombatStats, "hit" | "dodge" | "crit" | "critResist" | "block" | "blockResist">>,
 ): CombatStats {
   const base = realmBaseStat(realmMajor);
-  const maxHp = Math.round(aptitudes.hp * base * 3.0);
-  const atk = Math.round(aptitudes.atk * base * 1.0);
-  const def = Math.round(aptitudes.def * base * 0.8);
-  const spd = Math.round(aptitudes.spd * base * 0.5);
+  const gearHp = gear.hp ?? 0;
+  const gearAtk = gear.atk ?? 0;
+  const gearDef = gear.def ?? 0;
+  const gearSpd = gear.spd ?? 0;
+  const maxHp = Math.round(aptitudes.hp * (base + gearHp) * 3.0);
+  const atk = Math.round(aptitudes.atk * (base + gearAtk) * 1.0);
+  const def = Math.round(aptitudes.def * (base + gearDef) * 0.8);
+  const spd = Math.round(aptitudes.spd * (base + gearSpd) * 0.5);
   return {
     hp: maxHp,
     maxHp,
@@ -70,13 +77,13 @@ export function makeCombatant(params: {
   };
 }
 
-export function makeHero(skills: EquippedSkill[]): Combatant {
+export function makeHero(skills: EquippedSkill[], gear: Partial<GearBonus> = EMPTY_GEAR): Combatant {
   return makeCombatant({
     id: "hero",
     name: "主角",
     side: "ally",
     slot: CENTER_SLOT,
-    stats: deriveCombatStats(1),
+    stats: deriveCombatStats(1, DEFAULT_APTITUDES, gear),
     skills,
     isHero: true,
   });

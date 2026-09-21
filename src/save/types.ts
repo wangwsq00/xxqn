@@ -1,3 +1,7 @@
+import type { SaveEquipment } from "../equip/types";
+
+export type { SaveEquipment } from "../equip/types";
+
 export interface SavePlayer {
   realmMajor: number;
   realmLayer: number;
@@ -21,4 +25,5 @@ export interface SaveData {
   savedAt: number;
   player: SavePlayer;
   idle: SaveIdle;
+  equipment: SaveEquipment;
 }

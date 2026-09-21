@@ -1,3 +1,4 @@
+import { starterEquipment, migrateEquipment } from "../equip/state";
 import { accrueIdle } from "../idle/settle";
 import type { SaveData } from "./types";
 
@@ -22,6 +23,7 @@ export function defaultSave(now = Date.now()): SaveData {
       pendingStones: 0,
       lastOfflineSeconds: 0,
     },
+    equipment: starterEquipment(),
   };
 }
 
@@ -55,6 +57,7 @@ export function migrateSave(raw: unknown, now = Date.now()): SaveData | null {
       pendingStones: parsed.idle?.pendingStones ?? 0,
       lastOfflineSeconds: parsed.idle?.lastOfflineSeconds ?? 0,
     },
+    equipment: migrateEquipment(parsed.equipment),
   };
 }
 

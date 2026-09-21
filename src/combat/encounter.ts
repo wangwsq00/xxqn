@@ -1,10 +1,12 @@
 import { makeCombatant, makeHero } from "../combat/factory";
 import type { Combatant } from "../combat/types";
 import { SEVEN_STAR_SWORD } from "../data/skills";
+import { EMPTY_GEAR } from "../equip/catalog";
+import type { GearBonus } from "../equip/types";
 
 /** M1 试炼：主角居中，对位 2 名敌人（1 号、2 号）。 */
-export function createTrialEncounter(): Combatant[] {
-  const hero = makeHero([{ def: SEVEN_STAR_SWORD, cooldownRemaining: 0 }]);
+export function createTrialEncounter(gear: Partial<GearBonus> = EMPTY_GEAR): Combatant[] {
+  const hero = makeHero([{ def: SEVEN_STAR_SWORD, cooldownRemaining: 0 }], gear);
   const gruntA = makeCombatant({
     id: "enemy-1",
     name: "野修甲",
