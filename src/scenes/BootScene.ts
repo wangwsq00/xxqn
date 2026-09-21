@@ -1,9 +1,15 @@
 import Phaser from "phaser";
+import { preloadPortraits } from "../ui/portraitView";
 import { COLORS, FONT } from "../ui/theme";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
     super("Boot");
+  }
+
+  preload(): void {
+    this.cameras.main.setBackgroundColor(COLORS.bg);
+    preloadPortraits(this);
   }
 
   create(): void {
@@ -34,7 +40,7 @@ export class BootScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.time.delayedCall(600, () => {
+    this.time.delayedCall(400, () => {
       this.scene.start("Hub");
     });
   }

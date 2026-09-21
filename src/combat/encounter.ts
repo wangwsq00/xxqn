@@ -1,3 +1,4 @@
+import { PORTRAIT } from "../assets/portraits";
 import { makeCombatant, makeHero, realmBaseStat } from "../combat/factory";
 import type { Combatant, EquippedSkill } from "../combat/types";
 import { EMPTY_GEAR } from "../equip/catalog";
@@ -35,6 +36,7 @@ export function createTrialEncounter(
         block: enemy.block,
         blockResist: enemy.blockResist,
       },
+      portraitKey: enemy.portraitKey,
     }),
   );
   return [hero, ...allyExtras, ...enemies];
@@ -71,6 +73,7 @@ export function createHeartDemonEncounter(
       block: 8,
       blockResist: 0,
     },
+    portraitKey: PORTRAIT.enemyHeartDemon,
   });
   return [hero, ...allyExtras, demon];
 }

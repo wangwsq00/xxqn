@@ -1,3 +1,4 @@
+import { PORTRAIT } from "../assets/portraits";
 import { EMPTY_GEAR } from "../equip/catalog";
 import type { GearBonus } from "../equip/types";
 import { gongfaStatBonus } from "../gongfa/state";
@@ -63,6 +64,7 @@ export function makeCombatant(params: {
   stats: CombatStats;
   skills?: EquippedSkill[];
   isHero?: boolean;
+  portraitKey?: string;
 }): Combatant {
   return {
     id: params.id,
@@ -75,6 +77,7 @@ export function makeCombatant(params: {
     silenced: false,
     alive: true,
     isHero: params.isHero ?? false,
+    portraitKey: params.portraitKey,
     shieldHp: 0,
     shieldTurns: 0,
   };
@@ -104,5 +107,6 @@ export function makeHero(
     ),
     skills,
     isHero: true,
+    portraitKey: PORTRAIT.playerHero,
   });
 }

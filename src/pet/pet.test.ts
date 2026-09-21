@@ -30,6 +30,7 @@ describe("pet catalog and equip", () => {
     expect(unit?.slot).toBe(PET_ALLY_SLOT);
     expect(unit?.slot).not.toBe(CENTER_SLOT);
     expect(unit?.isHero).toBe(false);
+    expect(unit?.portraitKey).toBe("pet_linghu");
     expect(unit?.skills).toEqual([]);
     const cleared = unequipPet(equipped);
     expect(cleared.equippedId).toBeNull();

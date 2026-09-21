@@ -8,6 +8,8 @@ import {
   trialStageStatus,
   trialStatusLabel,
 } from "../trial/state";
+import { TRIAL_CARD_PORTRAIT_SIZE } from "../assets/portraits";
+import { addFramedPortrait } from "../ui/portraitView";
 import { COLORS, FONT } from "../ui/theme";
 
 export class TrialSelectScene extends Phaser.Scene {
@@ -83,8 +85,14 @@ export class TrialSelectScene extends Phaser.Scene {
       .setStrokeStyle(2, isNext ? COLORS.hero : COLORS.panelStroke)
       .setInteractive({ useHandCursor: unlocked });
 
+    addFramedPortrait(this, width / 2 - 236, y, stage.enemies[0]?.portraitKey, TRIAL_CARD_PORTRAIT_SIZE, {
+      stroke: isNext ? COLORS.hero : COLORS.panelStroke,
+      fill: COLORS.empty,
+    });
+
+    const textX = width / 2 + 40;
     this.add
-      .text(width / 2, y - 62, `第${stage.id}关  ${stage.name}`, {
+      .text(textX, y - 62, `第${stage.id}关  ${stage.name}`, {
         fontFamily: FONT,
         fontSize: "26px",
         color: COLORS.text,
@@ -93,7 +101,7 @@ export class TrialSelectScene extends Phaser.Scene {
 
     const enemyNames = stage.enemies.map((enemy) => enemy.name).join(" / ");
     this.add
-      .text(width / 2, y - 24, `敌人 ${enemyNames}  ·  血 ${stage.enemies[0]?.hp ?? 0} 起`, {
+      .text(textX, y - 24, `敌人 ${enemyNames}  ·  血 ${stage.enemies[0]?.hp ?? 0} 起`, {
         fontFamily: FONT,
         fontSize: "16px",
         color: COLORS.muted,
@@ -101,7 +109,7 @@ export class TrialSelectScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, y + 8, `胜利 ${stage.stones} 灵石`, {
+      .text(textX, y + 8, `胜利 ${stage.stones} 灵石`, {
         fontFamily: FONT,
         fontSize: "18px",
         color: COLORS.log,
@@ -112,7 +120,7 @@ export class TrialSelectScene extends Phaser.Scene {
       ? `${trialStatusLabel(status)}  ·  ${status === "cleared" ? "再次挑战" : "进入战斗"}`
       : trialStatusLabel(status);
     this.add
-      .text(width / 2, y + 48, statusLine, {
+      .text(textX, y + 48, statusLine, {
         fontFamily: FONT,
         fontSize: "18px",
         color: unlocked ? COLORS.heroHex : COLORS.muted,

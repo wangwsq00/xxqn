@@ -61,6 +61,8 @@ export interface Combatant {
   silenced: boolean;
   alive: boolean;
   isHero: boolean;
+  /** Phaser 纹理键；仅展示，不参与伤害/ATB。 */
+  portraitKey?: string;
   shieldHp: number;
   /** 剩余持续：持有者自身行动次数（不含施放当次）。 */
   shieldTurns: number;
