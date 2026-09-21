@@ -108,9 +108,11 @@ export class TrialSelectScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const action = unlocked ? (status === "cleared" ? "再次挑战" : "进入战斗") : "未解锁";
+    const statusLine = unlocked
+      ? `${trialStatusLabel(status)}  ·  ${status === "cleared" ? "再次挑战" : "进入战斗"}`
+      : trialStatusLabel(status);
     this.add
-      .text(width / 2, y + 48, `${trialStatusLabel(status)}  ·  ${action}`, {
+      .text(width / 2, y + 48, statusLine, {
         fontFamily: FONT,
         fontSize: "18px",
         color: unlocked ? COLORS.heroHex : COLORS.muted,
