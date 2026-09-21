@@ -1,10 +1,16 @@
 import Phaser from "phaser";
 import { ATB_MAX, SLOT_ORDER_TOP_TO_BOTTOM, TICK_MS } from "../combat/constants";
-import { createTrialEncounter } from "../combat/encounter";
+import {
+  createHeartDemonEncounter,
+  createTrialEncounter,
+  type BattleMode,
+} from "../combat/encounter";
 import { BattleEngine } from "../combat/engine";
 import type { ActionResult, Combatant, SlotIndex } from "../combat/types";
 import { applyTrialVictoryRewards, formatVictoryRewardText } from "../combat/rewards";
 import { equippedWeaponName, gearBonusFromEquipment } from "../equip/state";
+import { applyHeartDemonDefeat, applyHeartDemonVictory } from "../realm/breakthrough";
+import { realmLabel } from "../realm/label";
 import { loadSave, persistSave, type SaveData } from "../save/storage";
 import { COLORS, FONT } from "../ui/theme";
 
@@ -29,6 +35,7 @@ const BAR_W = 120;
 export class BattleScene extends Phaser.Scene {
   private save!: SaveData;
   private engine!: BattleEngine;
+  private mode: BattleMode = "trial";
   private views = new Map<string, SlotView>();
   private slotViews: SlotView[] = [];
   private logText?: Phaser.GameObjects.Text;
@@ -41,10 +48,19 @@ export class BattleScene extends Phaser.Scene {
     super("Battle");
   }
 
+  init(data?: { mode?: BattleMode }): void {
+    this.mode = data?.mode === "heartDemon" ? "heartDemon" : "trial";
+  }
+
   create(): void {
     this.save = loadSave();
     const gear = gearBonusFromEquipment(this.save.equipment);
-    this.engine = new BattleEngine(createTrialEncounter(gear));
+    const realmMajor = this.save.player.realmMajor;
+    this.engine = new BattleEngine(
+      this.mode === "heartDemon"
+        ? createHeartDemonEncounter(gear, realmMajor)
+        : createTrialEncounter(gear, realmMajor),
+    );
     this.views.clear();
     this.slotViews = [];
     this.animating = false;
@@ -54,8 +70,9 @@ export class BattleScene extends Phaser.Scene {
     const { width } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
+    const title = this.mode === "heartDemon" ? "心魔挑战" : "试炼战斗";
     this.add
-      .text(width / 2, 48, "试炼战斗", {
+      .text(width / 2, 48, title, {
         fontFamily: FONT,
         fontSize: "36px",
         color: COLORS.text,
@@ -65,8 +82,10 @@ export class BattleScene extends Phaser.Scene {
     const hero = this.engine.units.find((unit) => unit.isHero);
     const weapon = equippedWeaponName(this.save.equipment);
     const atkHint = weapon ? `${weapon} 攻击 ${hero?.stats.atk ?? 0}` : `未穿武器 攻击 ${hero?.stats.atk ?? 0}`;
+    const modeHint =
+      this.mode === "heartDemon" ? "战胜即可破境" : "胜利奖励灵石";
     this.add
-      .text(width / 2, 90, `行动条 · 主角居中 · ${atkHint} · 胜利奖励灵石`, {
+      .text(width / 2, 90, `行动条 · 主角居中 · ${atkHint} · ${modeHint}`, {
         fontFamily: FONT,
         fontSize: "16px",
         color: COLORS.muted,
@@ -299,19 +318,11 @@ export class BattleScene extends Phaser.Scene {
     }
     this.ended = true;
     const win = this.engine.status === "victory";
-    let lootLine = "无奖励\n点击任意处返回洞府";
-    let gainedStones = 0;
-    if (win) {
-      const result = applyTrialVictoryRewards(this.save);
-      this.save = result.save;
-      persistSave(this.save);
-      lootLine = formatVictoryRewardText(result.lines);
-      gainedStones = result.loot.stones;
-    }
+    const { lootLine, statusLine, bannerText } = this.resolveOutcome(win);
     const { width, height } = this.scale;
     const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.55);
     const banner = this.add
-      .text(width / 2, height / 2 - 56, win ? "战斗胜利" : "战斗失败", {
+      .text(width / 2, height / 2 - 56, bannerText, {
         fontFamily: FONT,
         fontSize: "48px",
         color: win ? COLORS.win : COLORS.lose,
@@ -329,7 +340,54 @@ export class BattleScene extends Phaser.Scene {
     this.add.container(0, 0, [dim, banner, sub]);
     dim.setInteractive();
     dim.on("pointerdown", () => this.scene.start("Hub"));
-    this.statusText?.setText(win ? `试炼完成 · 灵石 +${gainedStones}` : "再修炼一番吧");
+    this.statusText?.setText(statusLine);
+  }
+
+  private resolveOutcome(win: boolean): { lootLine: string; statusLine: string; bannerText: string } {
+    if (this.mode === "heartDemon") {
+      if (win) {
+        const result = applyHeartDemonVictory(this.save);
+        this.save = result.save;
+        persistSave(this.save);
+        if (result.succeeded) {
+          const from = realmLabel(result.fromMajor, result.fromLayer);
+          const to = realmLabel(result.toMajor, result.toLayer);
+          return {
+            bannerText: "心魔已破",
+            lootLine: `${from} → ${to}\n灵气已清零，开始新境修炼\n点击任意处返回洞府`,
+            statusLine: `破境成功 · ${to}`,
+          };
+        }
+        return {
+          bannerText: "战斗胜利",
+          lootLine: "条件已变，未能破境\n点击任意处返回洞府",
+          statusLine: "未能破境",
+        };
+      }
+      const result = applyHeartDemonDefeat(this.save);
+      this.save = result.save;
+      persistSave(this.save);
+      return {
+        bannerText: "心魔未破",
+        lootLine: "境界与灵气不变，可再挑战\n点击任意处返回洞府",
+        statusLine: "心魔未破，可再挑战",
+      };
+    }
+
+    let lootLine = "无奖励\n点击任意处返回洞府";
+    let gainedStones = 0;
+    if (win) {
+      const result = applyTrialVictoryRewards(this.save);
+      this.save = result.save;
+      persistSave(this.save);
+      lootLine = formatVictoryRewardText(result.lines);
+      gainedStones = result.loot.stones;
+    }
+    return {
+      bannerText: win ? "战斗胜利" : "战斗失败",
+      lootLine,
+      statusLine: win ? `试炼完成 · 灵石 +${gainedStones}` : "再修炼一番吧",
+    };
   }
 
   private makeButton(x: number, y: number, label: string, onClick: () => void): void {

@@ -10,7 +10,7 @@ export const MINOR_LAYERS = 9;
 /** 大境界数量：炼气…渡劫。 */
 export const MAJOR_REALMS = 9;
 
-/** 九层突破：灵气达需求 100% 可挑战心魔（本切片不开心魔）。 */
+/** 九层突破：灵气达需求 100% 可挑战心魔。 */
 export const BREAKTHROUGH_QI_READY_RATIO = 1;
 
 /** 九层突破：灵气上限为需求的 200%。 */
