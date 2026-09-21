@@ -10,6 +10,7 @@ import type { ActionResult, Combatant, SlotIndex } from "../combat/types";
 import { applyTrialVictoryRewards, formatVictoryRewardText } from "../combat/rewards";
 import { equippedWeaponName, gearBonusFromEquipment } from "../equip/state";
 import { combatSkillsFromGongfa } from "../gongfa/state";
+import { equippedPetCombatant } from "../pet/state";
 import { applyHeartDemonDefeat, applyHeartDemonVictory } from "../realm/breakthrough";
 import { realmLabel } from "../realm/label";
 import { loadSave, persistSave, type SaveData } from "../save/storage";
@@ -69,10 +70,12 @@ export class BattleScene extends Phaser.Scene {
     const gear = gearBonusFromEquipment(this.save.equipment);
     const realmMajor = this.save.player.realmMajor;
     const skills = combatSkillsFromGongfa(this.save.gongfa);
+    const pet = equippedPetCombatant(this.save.pets, realmMajor);
+    const allies = pet ? [pet] : [];
     this.engine = new BattleEngine(
       this.mode === "heartDemon"
-        ? createHeartDemonEncounter(gear, realmMajor, skills)
-        : createTrialEncounter(gear, realmMajor, skills, this.stageId),
+        ? createHeartDemonEncounter(gear, realmMajor, skills, allies)
+        : createTrialEncounter(gear, realmMajor, skills, this.stageId, allies),
     );
     this.views.clear();
     this.slotViews = [];

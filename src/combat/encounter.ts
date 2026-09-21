@@ -6,12 +6,13 @@ import { getTrialStage } from "../trial/catalog";
 
 export type BattleMode = "trial" | "heartDemon";
 
-/** M1 试炼：主角居中，对位该关敌人。功法由存档槽位传入，未装备则只普攻。 */
+/** M1 试炼：主角居中，对位该关敌人。功法由存档槽位传入，未装备则只普攻。灵宠可选占 2–5 号。 */
 export function createTrialEncounter(
   gear: Partial<GearBonus> = EMPTY_GEAR,
   realmMajor = 1,
   skills: EquippedSkill[] = [],
   stageId = 1,
+  allyExtras: Combatant[] = [],
 ): Combatant[] {
   const hero = makeHero(skills, gear, realmMajor);
   const stage = getTrialStage(stageId);
@@ -36,7 +37,7 @@ export function createTrialEncounter(
       },
     }),
   );
-  return [hero, ...enemies];
+  return [hero, ...allyExtras, ...enemies];
 }
 
 /**
@@ -47,6 +48,7 @@ export function createHeartDemonEncounter(
   gear: Partial<GearBonus> = EMPTY_GEAR,
   realmMajor = 1,
   skills: EquippedSkill[] = [],
+  allyExtras: Combatant[] = [],
 ): Combatant[] {
   const hero = makeHero(skills, gear, realmMajor);
   const base = realmBaseStat(realmMajor);
@@ -70,5 +72,5 @@ export function createHeartDemonEncounter(
       blockResist: 0,
     },
   });
-  return [hero, demon];
+  return [hero, ...allyExtras, demon];
 }

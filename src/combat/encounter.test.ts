@@ -3,6 +3,8 @@ import { CENTER_SLOT } from "./constants";
 import { createHeartDemonEncounter, createTrialEncounter } from "./encounter";
 import { WOODEN_SWORD_ATK } from "../equip/catalog";
 import { SEVEN_STAR_SWORD } from "../gongfa/catalog";
+import { STARTER_PET_ID } from "../pet/catalog";
+import { equipPet, equippedPetCombatant, starterPets } from "../pet/state";
 
 describe("createHeartDemonEncounter", () => {
   it("places the hero in the center slot opposite a single 心魔", () => {
@@ -52,5 +54,20 @@ describe("createTrialEncounter realm stats", () => {
     expect(stage3[0]?.stats.hp).toBeGreaterThan(stage2[0]!.stats.hp);
     expect(stage2[0]?.stats.atk).toBeGreaterThan(stage1[0]!.stats.atk);
     expect(stage3[0]?.stats.atk).toBeGreaterThan(stage2[0]!.stats.atk);
+  });
+});
+
+describe("createTrialEncounter with pet", () => {
+  it("keeps the hero in center and places 灵狐 in ally slot 2", () => {
+    const pet = equippedPetCombatant(equipPet(starterPets(), STARTER_PET_ID), 1);
+    expect(pet).not.toBeNull();
+    const units = createTrialEncounter({}, 1, [], 1, pet ? [pet] : []);
+    const hero = units.find((unit) => unit.isHero);
+    const fox = units.find((unit) => unit.id === "pet-linghu");
+    expect(hero?.slot).toBe(CENTER_SLOT);
+    expect(fox?.slot).toBe(2);
+    expect(fox?.side).toBe("ally");
+    expect(fox?.isHero).toBe(false);
+    expect(units.filter((unit) => unit.side === "ally")).toHaveLength(2);
   });
 });

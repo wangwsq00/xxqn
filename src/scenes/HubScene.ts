@@ -139,24 +139,30 @@ export class HubScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.makeClaimButton(width / 2, 560);
-    this.makeButton(width / 2 - 220, 660, "聚灵阵", () => {
+    this.makeButton(width / 2 - 255, 660, "聚灵阵", () => {
       const { save } = accrueIdle(this.save);
       this.save = save;
       persistSave(this.save);
       this.scene.start("Gathering");
-    }, 200);
-    this.makeButton(width / 2, 660, "装备", () => {
+    }, 150);
+    this.makeButton(width / 2 - 85, 660, "装备", () => {
       const { save } = accrueIdle(this.save);
       this.save = save;
       persistSave(this.save);
       this.scene.start("Equip");
-    }, 200);
-    this.makeButton(width / 2 + 220, 660, "功法", () => {
+    }, 150);
+    this.makeButton(width / 2 + 85, 660, "功法", () => {
       const { save } = accrueIdle(this.save);
       this.save = save;
       persistSave(this.save);
       this.scene.start("Gongfa");
-    }, 200);
+    }, 150);
+    this.makeButton(width / 2 + 255, 660, "灵宠", () => {
+      const { save } = accrueIdle(this.save);
+      this.save = save;
+      persistSave(this.save);
+      this.scene.start("Pet");
+    }, 150);
     this.makeButton(width / 2 - 190, 750, "进入试炼", () => {
       const { save } = accrueIdle(this.save);
       this.save = save;
@@ -176,7 +182,7 @@ export class HubScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, height - 72, "阵容：主角固定我方 1 号中位 · 5v5 空位可空", {
+      .text(width / 2, height - 72, "阵容：主角固定我方 1 号中位 · 灵宠可占 2 号位", {
         fontFamily: FONT,
         fontSize: "16px",
         color: COLORS.muted,
