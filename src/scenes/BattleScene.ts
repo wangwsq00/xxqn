@@ -134,21 +134,24 @@ export class BattleScene extends Phaser.Scene {
     const body = this.add.rectangle(x, y, CARD_W, CARD_H, fill, unit ? 1 : 0.35);
     body.setStrokeStyle(2, unit?.isHero ? 0xfff3c4 : 0x5a5478);
 
-    const label = unit ? unit.name : `空位 ${slot}`;
+    const title =
+      unit?.isHero && slot === 1 ? `${unit.name} · 中` : unit ? `${unit.name} · ${slot}` : `空位 ${slot}`;
     const nameText = this.add
-      .text(x, y - 38, slot === 1 && side === "ally" && unit?.isHero ? `${label} · 中` : `${label} · ${slot}`, {
+      .text(x, y - 38, title, {
         fontFamily: FONT,
         fontSize: "16px",
         color: unit ? COLORS.text : COLORS.muted,
       })
       .setOrigin(0.5);
 
-    const hpBarBg = this.add.rectangle(x, y + 8, BAR_W, 10, COLORS.hpBg);
+    const hpBarBg = this.add.rectangle(x, y + 8, BAR_W, 10, COLORS.hpBg).setAlpha(unit ? 1 : 0);
     const hpBar = this.add.rectangle(x - BAR_W / 2, y + 8, BAR_W, 10, COLORS.hp).setOrigin(0, 0.5);
-    const atbBarBg = this.add.rectangle(x, y + 24, BAR_W, 8, COLORS.atbBg);
+    hpBar.setAlpha(unit ? 1 : 0);
+    const atbBarBg = this.add.rectangle(x, y + 24, BAR_W, 8, COLORS.atbBg).setAlpha(unit ? 1 : 0);
     const atbBar = this.add.rectangle(x - BAR_W / 2, y + 24, BAR_W, 8, COLORS.atb).setOrigin(0, 0.5);
+    atbBar.setAlpha(unit ? 1 : 0);
     const hpText = this.add
-      .text(x, y + 44, unit ? `${unit.stats.hp}/${unit.stats.maxHp}` : "—", {
+      .text(x, y + 44, unit ? `${unit.stats.hp}/${unit.stats.maxHp}` : "", {
         fontFamily: FONT,
         fontSize: "14px",
         color: COLORS.muted,
