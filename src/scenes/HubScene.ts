@@ -8,12 +8,20 @@ import {
   PORTRAIT,
 } from "../assets/portraits";
 import {
+  ABSORB_FX_ENABLED,
+  absorbMoveToLocal,
+  HUB_ABSORB_DEPTH,
+  HUB_ARRAY_CENTER_X,
+  HUB_ARRAY_CENTER_Y,
+  HUB_DOCK_DEPTH,
   HUB_MEDITATE,
   HUB_MEDITATE_HEIGHT,
+  speedBarAvatarKey,
   spiritArrayFx,
   spiritArrayTextureKey,
   spiritArrayTier,
   UI_ICON,
+  UI_ICON_ON,
 } from "../assets/presentation";
 import { accrueIdle, claimableAmounts, claimIdle, hasClaimable } from "../idle/settle";
 import { getPetDef } from "../pet/catalog";
@@ -52,6 +60,7 @@ export class HubScene extends Phaser.Scene {
   private dockTrial?: IconTab;
   private dockGrow?: IconTab;
   private arraySpin?: Phaser.GameObjects.Image;
+  private arrayInner?: Phaser.GameObjects.Image;
   private arrayRotateMs = 18000;
   private onVisibility?: () => void;
 
@@ -156,10 +165,13 @@ export class HubScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    if (!this.arraySpin) {
+    if (!ABSORB_FX_ENABLED || !this.arraySpin) {
       return;
     }
     this.arraySpin.angle = (this.arraySpin.angle + (360 * delta) / this.arrayRotateMs) % 360;
+    if (this.arrayInner) {
+      this.arrayInner.angle = -this.arraySpin.angle * 0.65;
+    }
   }
 
   private drawLowerWash(width: number, height: number): void {
@@ -185,33 +197,37 @@ export class HubScene extends Phaser.Scene {
     this.add.ellipse(feetX, feetY + 16, arraySize * 0.86, 34, PALETTE.stroke, 0.38).setDepth(2);
 
     const arrayKey = spiritArrayTextureKey(tier);
+    const arrayX = HUB_ARRAY_CENTER_X;
+    const arrayY = HUB_ARRAY_CENTER_Y;
     if (this.textures.exists(arrayKey)) {
       this.arraySpin = this.add
-        .image(feetX, feetY, arrayKey)
+        .image(arrayX, arrayY, arrayKey)
         .setDisplaySize(arraySize, arraySize)
         .setDepth(3)
         .setAlpha(fx.alphaMin);
-      this.tweens.add({
-        targets: this.arraySpin,
-        alpha: 1,
-        duration: 1400,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
+      this.arrayInner = this.add
+        .image(arrayX, arrayY, arrayKey)
+        .setDisplaySize(arraySize * 0.58, arraySize * 0.58)
+        .setDepth(4)
+        .setAlpha(fx.alphaMin * 0.9);
+      if (ABSORB_FX_ENABLED) {
+        this.breatheArray(this.arraySpin, fx.breatheMs, 0);
+        this.breatheArray(this.arrayInner, fx.breatheMs, fx.breatheMs / 2);
+      }
     }
 
     const seated = this.textures.exists(HUB_MEDITATE);
     const bodyH = seated ? HUB_MEDITATE_HEIGHT : HUB_HERO_HEIGHT;
+    const chestY = feetY - bodyH * (seated ? 0.48 : 0.4);
     const glow = this.add
-      .circle(feetX, feetY - bodyH * (seated ? 0.48 : 0.4), fx.glowRadius, PALETTE.cyan, fx.glowAlpha)
-      .setDepth(4)
+      .circle(feetX, chestY, fx.glowRadius, PALETTE.cyan, fx.glowAlpha)
+      .setDepth(5)
       .setBlendMode(Phaser.BlendModes.ADD);
     this.tweens.add({
       targets: glow,
       alpha: fx.glowAlpha * 0.4,
       scale: 1.08,
-      duration: 1300,
+      duration: fx.breatheMs,
       yoyo: true,
       repeat: -1,
       ease: "Sine.easeInOut",
@@ -252,29 +268,42 @@ export class HubScene extends Phaser.Scene {
         this.add
           .image(feetX + 156, feetY - 28, petKey)
           .setOrigin(0.5, 1)
-          .setDepth(5);
+          .setDepth(6);
       }
     }
 
     const mote = ensureMote(this);
-    if (this.textures.exists(mote)) {
-      this.add
-        .particles(feetX, feetY - 6, mote, {
-          x: { min: -60 - tier * 22, max: 60 + tier * 22 },
-          speedY: {
-            min: -fx.moteSpeed * 1.25 * (seated ? bodyH / HUB_HERO_HEIGHT : 1),
-            max: -fx.moteSpeed * 0.75 * (seated ? bodyH / HUB_HERO_HEIGHT : 1),
-          },
-          speedX: { min: -16, max: 16 },
-          lifespan: seated ? { min: 860, max: 1320 } : { min: 680, max: 1080 },
-          frequency: fx.particleFrequency,
-          scale: { start: 0.28 + tier * 0.12, end: 0 },
-          alpha: { start: 0.9, end: 0 },
-          blendMode: Phaser.BlendModes.ADD,
-          tint: 0xd8fffb,
-        })
-        .setDepth(7);
+    if (ABSORB_FX_ENABLED && this.textures.exists(mote)) {
+      const gather = absorbMoveToLocal(arrayY, chestY);
+      const ring = 72 + tier * 26;
+      const emitter = this.add.particles(arrayX, arrayY, mote, {
+        x: { min: -ring, max: ring },
+        y: { min: -ring * 0.28, max: ring * 0.28 },
+        moveToX: gather.x,
+        moveToY: gather.y,
+        lifespan: { min: 900, max: 1300 },
+        frequency: fx.particleFrequency,
+        scale: { start: 0.28 + tier * 0.12, end: 0 },
+        alpha: { start: 0.9, end: 0 },
+        blendMode: Phaser.BlendModes.ADD,
+        tint: 0xd8fffb,
+      });
+      emitter.setDepth(HUB_ABSORB_DEPTH);
     }
+  }
+
+  private breatheArray(target: Phaser.GameObjects.Image, duration: number, delay: number): void {
+    this.tweens.add({
+      targets: target,
+      scaleX: target.scaleX * 1.06,
+      scaleY: target.scaleY * 1.06,
+      alpha: 1,
+      duration,
+      delay,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
   }
 
   private drawAvatarCard(): void {
@@ -284,9 +313,12 @@ export class HubScene extends Phaser.Scene {
     bg.lineStyle(2, PALETTE.gold, 1);
     bg.strokeRoundedRect(17, 17, 398, 98, 27);
 
-    const faceKey = this.textures.exists(PORTRAIT.playerHero)
-      ? ensureFaceDisc(this, PORTRAIT.playerHero, 84)
-      : null;
+    const avatarKey = speedBarAvatarKey(PORTRAIT.playerHero);
+    const faceKey = this.textures.exists(avatarKey)
+      ? avatarKey
+      : this.textures.exists(PORTRAIT.playerHero)
+        ? ensureFaceDisc(this, PORTRAIT.playerHero, 84)
+        : null;
     if (faceKey && this.textures.exists(faceKey)) {
       this.add.image(66, 66, faceKey).setDisplaySize(76, 76).setDepth(46);
     }
@@ -323,14 +355,15 @@ export class HubScene extends Phaser.Scene {
     const bar = this.add
       .rectangle(width / 2, height - DOCK_HEIGHT / 2, width, DOCK_HEIGHT, PALETTE.ink, 0.94)
       .setStrokeStyle(2, PALETTE.gold)
-      .setDepth(100);
+      .setDepth(HUB_DOCK_DEPTH);
     bar.setInteractive();
     const y = height - DOCK_HEIGHT / 2;
     const hitW = Math.floor(width / 3) - 16;
+    const tabDepth = HUB_DOCK_DEPTH + 10;
     this.dockHub = makeIconTab(this, width / 6, y, hitW, DOCK_HIT_HEIGHT, "洞府", UI_ICON.dongfu, () => {
       this.closeSheet();
       this.closeAttributes();
-    }, { tone: "cinnabar", depth: 110 });
+    }, { tone: "cinnabar", depth: tabDepth, selectedIconKey: UI_ICON_ON.dongfu });
     this.dockTrial = makeIconTab(
       this,
       width / 2,
@@ -340,7 +373,7 @@ export class HubScene extends Phaser.Scene {
       "试炼",
       UI_ICON.trial,
       () => this.leaveFor("TrialSelect"),
-      { tone: "quiet", depth: 110 },
+      { tone: "quiet", depth: tabDepth, selectedIconKey: UI_ICON_ON.trial },
     );
     this.dockGrow = makeIconTab(
       this,
@@ -349,9 +382,9 @@ export class HubScene extends Phaser.Scene {
       hitW,
       DOCK_HIT_HEIGHT,
       "养成",
-      UI_ICON.growth,
+      UI_ICON.cultivate,
       () => this.toggleSheet(),
-      { tone: "quiet", depth: 110 },
+      { tone: "quiet", depth: tabDepth, selectedIconKey: UI_ICON_ON.cultivate },
     );
   }
 

@@ -6,13 +6,23 @@ import type { CombatStats } from "../combat/types";
 import { DOCK_HIT_HEIGHT } from "../ui/theme";
 import { HUB_HERO_FEET_Y } from "./portraits";
 import {
+  absorbMoveToLocal,
   atbFillRatio,
+  HUB_ABSORB_DEPTH,
+  HUB_ARRAY_CENTER_X,
+  HUB_ARRAY_CENTER_Y,
+  HUB_DOCK_DEPTH,
   HUB_MEDITATE,
   HUB_MEDITATE_HEIGHT,
+  PRESENTATION_CANDIDATES,
   PRESENTATION_FILES,
+  resolvePresentationFile,
+  skillFxTextureId,
+  SKILL_FX,
   speedBarIconX,
   spiritArrayFx,
   spiritArrayTier,
+  UI_ICON,
 } from "./presentation";
 
 function stats(spd: number): CombatStats {
@@ -59,23 +69,56 @@ describe("M2 spirit array tier", () => {
     expect(high.moteSpeed).toBeGreaterThan(low.moteSpeed);
     expect(high.glowAlpha).toBeGreaterThan(low.glowAlpha);
     expect(high.rotateMs).toBeLessThan(low.rotateMs);
+    expect(low.breatheMs).toBeGreaterThanOrEqual(2400);
+    expect(low.breatheMs).toBeLessThanOrEqual(3200);
+    expect(high.breatheMs).toBeGreaterThanOrEqual(2400);
+    expect(high.breatheMs).toBeLessThanOrEqual(3200);
+    expect(high.breatheMs).toBeLessThan(mid.breatheMs);
+    expect(mid.breatheMs).toBeLessThan(low.breatheMs);
   });
 });
 
 describe("M2 presentation files", () => {
-  it("ships dock icons and three array tiers", () => {
-    expect(PRESENTATION_FILES.map((file) => file.path)).toEqual([
+  it("prefers official paths and falls back to the earlier icons and arrays", () => {
+    const dongfu = PRESENTATION_CANDIDATES.find((item) => item.id === UI_ICON.dongfu);
+    const arrayLow = PRESENTATION_CANDIDATES.find((item) => item.id === "fx_array_low");
+    expect(dongfu?.official).toBe("assets/ui/icons/icon_tab_dongfu.png");
+    expect(arrayLow?.official).toBe("assets/fx/array/fx_array_low.png");
+    const both = new Set([
+      "assets/ui/icons/icon_tab_dongfu.png",
       "assets/ui/icon_dongfu.png",
-      "assets/ui/icon_trial.png",
-      "assets/ui/icon_growth.png",
+      "assets/fx/array/fx_array_low.png",
       "assets/fx/array_tier1.png",
-      "assets/fx/array_tier2.png",
-      "assets/fx/array_tier3.png",
-      "assets/char/hero_meditate.png",
     ]);
-    expect(PRESENTATION_FILES.some((file) => file.key === HUB_MEDITATE)).toBe(true);
+    expect(resolvePresentationFile(dongfu!, both)?.path).toBe("assets/ui/icons/icon_tab_dongfu.png");
+    expect(resolvePresentationFile(arrayLow!, both)?.path).toBe("assets/fx/array/fx_array_low.png");
+    const fallbackOnly = new Set(["assets/ui/icon_dongfu.png", "assets/fx/array_tier1.png"]);
+    expect(resolvePresentationFile(dongfu!, fallbackOnly)?.path).toBe("assets/ui/icon_dongfu.png");
+    expect(resolvePresentationFile(arrayLow!, fallbackOnly)?.path).toBe("assets/fx/array_tier1.png");
+
+    const byKey = new Map(PRESENTATION_FILES.map((file) => [file.key, file.path]));
+    expect(byKey.get(UI_ICON.dongfu)).toBe("assets/ui/icon_dongfu.png");
+    expect(byKey.get(UI_ICON.trial)).toBe("assets/ui/icon_trial.png");
+    expect(byKey.get(UI_ICON.cultivate)).toBe("assets/ui/icon_growth.png");
+    expect(byKey.get("fx_array_low")).toBe("assets/fx/array_tier1.png");
+    expect(byKey.get("fx_array_mid")).toBe("assets/fx/array_tier2.png");
+    expect(byKey.get("fx_array_high")).toBe("assets/fx/array_tier3.png");
+    expect(byKey.get(HUB_MEDITATE)).toBe("assets/char/hero_meditate.png");
+    expect(byKey.has(SKILL_FX.swordqi)).toBe(false);
+    expect(byKey.has("avatar_player_hero")).toBe(false);
     expect(HUB_HERO_FEET_Y - HUB_MEDITATE_HEIGHT).toBeGreaterThanOrEqual(240);
+    expect(HUB_ARRAY_CENTER_X).toBe(360);
+    expect(HUB_ARRAY_CENTER_Y).toBe(760);
+    expect(HUB_ARRAY_CENTER_Y).toBeLessThan(HUB_HERO_FEET_Y);
+    expect(HUB_ABSORB_DEPTH).toBeLessThan(HUB_DOCK_DEPTH);
     expect(DOCK_HIT_HEIGHT).toBeGreaterThanOrEqual(88);
+    const inward = absorbMoveToLocal(HUB_ARRAY_CENTER_Y, HUB_HERO_FEET_Y - 240);
+    expect(inward.x).toBe(0);
+    expect(inward.y).toBeLessThan(0);
+    expect(absorbMoveToLocal(760, 900).y).toBe(-40);
+    expect(skillFxTextureId("七星剑阵")).toBe(SKILL_FX.swordqi);
+    expect(skillFxTextureId("天罡护体")).toBe(SKILL_FX.shockwave);
+    expect(skillFxTextureId("普通攻击")).toBeNull();
   });
 });
 

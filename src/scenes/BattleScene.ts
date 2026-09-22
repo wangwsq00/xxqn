@@ -18,6 +18,7 @@ import { getTrialStage } from "../trial/catalog";
 import { isTrialStageUnlocked } from "../trial/state";
 import { BACKDROP } from "../assets/backdrops";
 import { BATTLE_ENEMY_HEIGHT, BATTLE_HERO_HEIGHT, BATTLE_PET_HEIGHT, PORTRAIT } from "../assets/portraits";
+import { skillFxTextureId, SKILL_FX } from "../assets/presentation";
 import { makeButton, mountBackdrop, tweenBar } from "../ui/chrome";
 import { hasPortrait } from "../ui/portraitView";
 import { ensureMote, ensureSoftBody } from "../ui/softPortrait";
@@ -40,6 +41,12 @@ interface SlotView {
 }
 
 const BAR_W = 92;
+/** 普攻冲刺。规格 120–180ms，命中落在冲到最远处。 */
+const LUNGE_MS = 160;
+/** 命中闪白。规格 60–80ms。 */
+const HIT_FLASH_MS = 70;
+/** 功法出手前的现有表现延迟。施法条跟这段，不另加引擎前摇。 */
+const CAST_WINDUP_MS = 180;
 
 export class BattleScene extends Phaser.Scene {
   private save!: SaveData;
@@ -319,11 +326,12 @@ export class BattleScene extends Phaser.Scene {
     const actorView = this.views.get(action.actorId);
     this.statusText?.setText(`${actor?.name ?? "单位"} 使用 ${action.skillName}`);
 
-    const impactAt = action.isBasicAttack ? 150 : 180;
+    const impactAt = action.isBasicAttack ? LUNGE_MS : CAST_WINDUP_MS;
     if (actorView && action.isBasicAttack) {
       this.lunge(actorView, action);
     } else if (actorView) {
       this.castPose(actorView, action);
+      this.showCastBar(actorView, CAST_WINDUP_MS);
     }
 
     action.targets.forEach((target, index) => {
@@ -353,13 +361,13 @@ export class BattleScene extends Phaser.Scene {
     const dy = primary ? Math.max(-48, Math.min(48, (primary.rootY - view.rootY) * 0.28)) : 0;
     if (view.portrait) {
       view.portrait.setTint(0xffe7a8);
-      this.time.delayedCall(160, () => this.restorePortrait(view));
+      this.time.delayedCall(LUNGE_MS, () => this.restorePortrait(view));
     }
     this.tweens.add({
       targets: view.root,
       x: view.rootX + dir * 96,
       y: view.rootY + dy,
-      duration: 150,
+      duration: LUNGE_MS,
       yoyo: true,
       ease: "Quad.easeOut",
     });
@@ -378,32 +386,79 @@ export class BattleScene extends Phaser.Scene {
       view.portrait.setTint(view.side === "ally" ? 0xc8fff8 : 0xffc2b0);
       this.time.delayedCall(170, () => this.restorePortrait(view));
     }
+    const fxId = skillFxTextureId(action.skillName);
+    if (fxId === SKILL_FX.shockwave && this.textures.exists(fxId)) {
+      this.spawnShockwave(view, fxId);
+      return;
+    }
+    const boltKey = fxId && this.textures.exists(fxId) ? fxId : ensureMote(this);
     for (const target of action.targets) {
       const to = this.views.get(target.targetId);
       if (to) {
-        this.spawnBolt(view, to);
+        this.spawnBolt(view, to, boltKey);
       }
     }
   }
 
-  private spawnBolt(from: SlotView, to: SlotView): void {
-    const mote = ensureMote(this);
-    if (!this.textures.exists(mote)) {
+  private showCastBar(view: SlotView, duration: number): void {
+    const y = view.rootY - view.displayH - 36;
+    const width = 72;
+    const bg = this.add.rectangle(view.rootX, y, width, 6, PALETTE.stroke).setDepth(49);
+    const fill = this.add
+      .rectangle(view.rootX - width / 2, y, width, 6, PALETTE.cyan)
+      .setOrigin(0, 0.5)
+      .setScale(0, 1)
+      .setDepth(50);
+    this.tweens.add({
+      targets: fill,
+      scaleX: 1,
+      duration,
+      ease: "Linear",
+      onComplete: () => {
+        bg.destroy();
+        fill.destroy();
+      },
+    });
+  }
+
+  private spawnShockwave(view: SlotView, textureKey: string): void {
+    const wave = this.add
+      .image(view.rootX, view.rootY - view.displayH * 0.42, textureKey)
+      .setDisplaySize(48, 48)
+      .setDepth(48)
+      .setAlpha(0.9);
+    this.tweens.add({
+      targets: wave,
+      displayWidth: 160,
+      displayHeight: 160,
+      alpha: 0,
+      duration: CAST_WINDUP_MS,
+      ease: "Quad.easeOut",
+      onComplete: () => wave.destroy(),
+    });
+  }
+
+  private spawnBolt(from: SlotView, to: SlotView, textureKey: string): void {
+    if (!this.textures.exists(textureKey)) {
       return;
     }
+    const shaped = textureKey !== ensureMote(this);
     const bolt = this.add
-      .image(from.rootX, from.rootY - from.displayH * 0.45, mote)
-      .setDepth(48)
-      .setBlendMode(Phaser.BlendModes.ADD)
-      .setScale(from.side === "ally" ? 1.15 : 1);
-    if (from.side === "enemy") {
-      bolt.setTint(0xff6a4a);
+      .image(from.rootX, from.rootY - from.displayH * 0.45, textureKey)
+      .setDepth(48);
+    if (shaped) {
+      bolt.setDisplaySize(72, 72);
+    } else {
+      bolt.setBlendMode(Phaser.BlendModes.ADD).setScale(from.side === "ally" ? 1.15 : 1);
+      if (from.side === "enemy") {
+        bolt.setTint(0xff6a4a);
+      }
     }
     this.tweens.add({
       targets: bolt,
       x: to.rootX,
       y: to.rootY - to.displayH * 0.42,
-      duration: 170,
+      duration: CAST_WINDUP_MS,
       ease: "Quad.easeIn",
       onComplete: () => bolt.destroy(),
     });
@@ -484,7 +539,7 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     view.portrait.setTintFill(0xfff4dc);
-    this.time.delayedCall(80, () => this.restorePortrait(view));
+    this.time.delayedCall(HIT_FLASH_MS, () => this.restorePortrait(view));
   }
 
   private restorePortrait(view: SlotView): void {

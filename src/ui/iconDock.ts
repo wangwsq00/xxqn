@@ -21,7 +21,7 @@ export function makeIconTab(
   label: string,
   iconKey: string,
   onClick: () => void,
-  options?: { tone?: ButtonTone; depth?: number },
+  options?: { tone?: ButtonTone; depth?: number; selectedIconKey?: string },
 ): IconTab {
   const root = scene.add.container(x, y);
   if (options?.depth !== undefined) {
@@ -63,6 +63,9 @@ export function makeIconTab(
       ring.strokeCircle(0, iconY, 34);
     }
     text.setColor(selected ? GOLD_HEX : PARCHMENT_HEX);
+    if (icon && options?.selectedIconKey && scene.textures.exists(options.selectedIconKey)) {
+      icon.setTexture(selected ? options.selectedIconKey : iconKey);
+    }
   };
   paint();
 

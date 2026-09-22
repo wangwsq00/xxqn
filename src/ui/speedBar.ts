@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { speedBarIconX } from "../assets/presentation";
+import { speedBarAvatarKey, speedBarIconX } from "../assets/presentation";
 import { compareReady } from "../combat/engine";
 import type { Combatant } from "../combat/types";
 import { hasPortrait } from "./portraitView";
@@ -80,10 +80,13 @@ export class SharedSpeedBar {
 
   private createIcon(scene: Phaser.Scene, unit: Combatant): SpeedIcon {
     const root = scene.add.container(this.trackLeft, this.y).setDepth(56);
+    const avatarKey = unit.portraitKey ? speedBarAvatarKey(unit.portraitKey) : "";
     const faceKey =
-      unit.portraitKey && hasPortrait(scene, unit.portraitKey)
-        ? ensureFaceDisc(scene, unit.portraitKey, 64)
-        : null;
+      avatarKey && scene.textures.exists(avatarKey)
+        ? avatarKey
+        : unit.portraitKey && hasPortrait(scene, unit.portraitKey)
+          ? ensureFaceDisc(scene, unit.portraitKey, 64)
+          : null;
     if (faceKey && scene.textures.exists(faceKey)) {
       root.add(scene.add.image(0, 0, faceKey).setDisplaySize(ICON - 4, ICON - 4));
     } else {

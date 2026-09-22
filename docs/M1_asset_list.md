@@ -1,6 +1,6 @@
 # M1 立绘与界面资源
 
-洞府法阵、底栏图标、战斗无框站位和共用速度条见 [`M2_presentation.md`](M2_presentation.md)。下文仍是 M1 立绘与背景。
+洞府法阵、底栏图标、战斗无框站位和共用速度条见 [`M2_presentation.md`](M2_presentation.md)。官方资源路径见 [`M1_presentation_v2.md`](M1_presentation_v2.md) §3.4。下文仍是 M1 立绘与背景。
 
 第一批国漫立绘，替换战斗 / 洞府 / 灵宠色块。洞府视觉重建见 [`M1_visual_rebuild.md`](M1_visual_rebuild.md)。不改玩法数值。文件名**不要**用 rabbit / wolf。
 
