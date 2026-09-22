@@ -3,8 +3,10 @@ import { PET_LIST_PORTRAIT_SIZE, PET_SLOT_PORTRAIT_SIZE } from "../assets/portra
 import { getPetDef } from "../pet/catalog";
 import { derivePetStats, equipPet, isPetEquipped, unequipPet, unequippedOwned } from "../pet/state";
 import { loadSave, persistSave, type SaveData } from "../save/storage";
+import { BACKDROP } from "../assets/backdrops";
+import { makeButton, mountBackdrop } from "../ui/chrome";
 import { addFramedPortrait } from "../ui/portraitView";
-import { COLORS, FONT } from "../ui/theme";
+import { COLORS, FONT, PALETTE } from "../ui/theme";
 
 export class PetScene extends Phaser.Scene {
   private save!: SaveData;
@@ -17,7 +19,7 @@ export class PetScene extends Phaser.Scene {
   create(): void {
     this.save = loadSave();
     const { width, height } = this.scale;
-    this.cameras.main.setBackgroundColor(COLORS.bg);
+    mountBackdrop(this, BACKDROP.dongfu, { top: 160, bottom: 220, scrim: 0.8 });
 
     this.add
       .text(width / 2, 64, "灵宠", {
@@ -38,16 +40,6 @@ export class PetScene extends Phaser.Scene {
     this.drawSlot();
     this.drawOwned();
 
-    this.add
-      .text(width / 2, 980, "开局已获得灵狐。穿戴写入 LocalStorage。", {
-        fontFamily: FONT,
-        fontSize: "16px",
-        color: COLORS.muted,
-        align: "center",
-        wordWrap: { width: 600 },
-      })
-      .setOrigin(0.5);
-
     this.hint = this.add
       .text(width / 2, 1040, "点已有灵宠出战，再点出战槽卸下。未出战则试炼仍只上主角。", {
         fontFamily: FONT,
@@ -58,10 +50,10 @@ export class PetScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.makeButton(width / 2, height - 88, "返回洞府", () => {
+    makeButton(this, width / 2, height - 88, 360, 72, "返回洞府", () => {
       persistSave(this.save);
       this.scene.start("Hub");
-    });
+    }, { tone: "gold", fontSize: 28, depth: 8 });
 
     const pendingHint = this.registry.get("petHint") as { text: string; ok?: boolean } | undefined;
     if (pendingHint?.text) {
@@ -79,8 +71,8 @@ export class PetScene extends Phaser.Scene {
     const x = width / 2;
     const y = 250;
     const bg = this.add
-      .rectangle(x, y, 560, 180, filled ? COLORS.ally : COLORS.empty, filled ? 1 : 0.9)
-      .setStrokeStyle(2, filled ? 0x9ed4ea : COLORS.panelStroke);
+      .rectangle(x, y, 560, 180, filled ? PALETTE.inkDeep : PALETTE.ink, filled ? 0.92 : 0.88)
+      .setStrokeStyle(2, filled ? PALETTE.cyan : PALETTE.gold);
 
     this.add
       .text(x - 40, y - 62, "出战槽 · 我方 2 号位", {
@@ -91,7 +83,7 @@ export class PetScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     addFramedPortrait(this, x - 190, y + 8, def?.portraitKey, PET_SLOT_PORTRAIT_SIZE, {
-      stroke: filled ? 0x9ed4ea : COLORS.panelStroke,
+      stroke: filled ? PALETTE.cyan : PALETTE.gold,
       fill: filled ? COLORS.ally : COLORS.empty,
     });
 
@@ -132,7 +124,7 @@ export class PetScene extends Phaser.Scene {
 
   private drawOwned(): void {
     const { width } = this.scale;
-    this.add.rectangle(width / 2, 680, 620, 300, COLORS.panel).setStrokeStyle(2, COLORS.panelStroke);
+    this.add.rectangle(width / 2, 680, 620, 300, PALETTE.ink, 0.9).setStrokeStyle(2, PALETTE.gold);
     this.add
       .text(width / 2, 548, "已有灵宠", {
         fontFamily: FONT,
@@ -149,16 +141,18 @@ export class PetScene extends Phaser.Scene {
       const y = 640 + index * 110;
       const available = unequippedOwned(this.save.pets).includes(def.id);
       const equipped = isPetEquipped(this.save.pets, def.id);
-      const bg = this.add.rectangle(width / 2, y, 560, 96, available ? COLORS.hero : COLORS.empty);
+      const bg = this.add
+        .rectangle(width / 2, y, 560, 96, available ? PALETTE.cinnabar : PALETTE.ink, available ? 1 : 0.88)
+        .setStrokeStyle(2, PALETTE.gold);
       if (available) {
         bg.setInteractive({ useHandCursor: true });
         bg.on("pointerdown", () => this.equip(def.id));
       }
       addFramedPortrait(this, width / 2 - 220, y, def.portraitKey, PET_LIST_PORTRAIT_SIZE, {
-        stroke: available ? 0x3a2a08 : COLORS.panelStroke,
+        stroke: available ? PALETTE.gold : PALETTE.gold,
         fill: available ? COLORS.hero : COLORS.empty,
       });
-      const titleColor = available ? "#1a1204" : COLORS.text;
+      const titleColor = available ? COLORS.body : COLORS.text;
       this.add
         .text(width / 2 + 28, y - 22, `${def.name}  ·  ${def.gradeLabel}`, {
           fontFamily: FONT,
@@ -174,7 +168,7 @@ export class PetScene extends Phaser.Scene {
         .text(width / 2 + 28, y + 18, sub, {
           fontFamily: FONT,
           fontSize: "14px",
-          color: available ? "#3a2a08" : COLORS.muted,
+          color: available ? COLORS.body : COLORS.muted,
           align: "center",
           wordWrap: { width: 400 },
         })
@@ -207,18 +201,4 @@ export class PetScene extends Phaser.Scene {
     this.persistAndReload(def ? `已卸下「${def.name}」。` : "已卸下。", false);
   }
 
-  private makeButton(x: number, y: number, label: string, onClick: () => void): void {
-    const bg = this.add.rectangle(x, y, 360, 72, COLORS.hero).setInteractive({ useHandCursor: true });
-    this.add
-      .text(x, y, label, {
-        fontFamily: FONT,
-        fontSize: "28px",
-        color: "#1a1204",
-      })
-      .setOrigin(0.5)
-      .setDepth(1);
-    bg.on("pointerdown", onClick);
-    bg.on("pointerover", () => bg.setFillStyle(0xe8b84a));
-    bg.on("pointerout", () => bg.setFillStyle(COLORS.hero));
-  }
 }

@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { PORTRAIT_FILES } from "../assets/portraits";
+import { PALETTE } from "./theme";
 
 export function preloadPortraits(scene: Phaser.Scene): void {
   for (const file of PORTRAIT_FILES) {
@@ -36,10 +37,33 @@ export function addFramedPortrait(
 ): { frame: Phaser.GameObjects.Rectangle; portrait?: Phaser.GameObjects.Image } {
   const frameSize = size + 10;
   const frame = scene.add
-    .rectangle(x, y, frameSize, frameSize, options?.fill ?? 0x14101c)
-    .setStrokeStyle(2, options?.stroke ?? 0xc9a227);
+    .rectangle(x, y, frameSize, frameSize, options?.fill ?? PALETTE.ink)
+    .setStrokeStyle(2, options?.stroke ?? PALETTE.gold);
   if (!hasPortrait(scene, key)) {
     return { frame };
   }
   return { frame, portrait: addPortrait(scene, x, y, key, size) };
+}
+
+/** 底中锚点立绘牌。feetY 是画像底边，不是牌面外框。 */
+export function addStandingPlate(
+  scene: Phaser.Scene,
+  x: number,
+  feetY: number,
+  key: string | undefined,
+  height: number,
+  options?: { depth?: number; stroke?: number },
+): { frame: Phaser.GameObjects.Rectangle; portrait?: Phaser.GameObjects.Image } {
+  const depth = options?.depth ?? 4;
+  const frame = scene.add
+    .rectangle(x, feetY + 8, height + 16, height + 16, PALETTE.ink, 1)
+    .setOrigin(0.5, 1)
+    .setStrokeStyle(3, options?.stroke ?? PALETTE.gold);
+  frame.setDepth(depth);
+  if (!hasPortrait(scene, key)) {
+    return { frame };
+  }
+  const portrait = addPortrait(scene, x, feetY, key, height, { x: 0.5, y: 1 });
+  portrait.setDepth(depth + 1);
+  return { frame, portrait };
 }

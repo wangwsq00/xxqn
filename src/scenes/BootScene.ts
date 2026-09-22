@@ -1,4 +1,6 @@
 import Phaser from "phaser";
+import { BACKDROP, BACKDROP_FILES } from "../assets/backdrops";
+import { mountBackdrop } from "../ui/chrome";
 import { preloadPortraits } from "../ui/portraitView";
 import { COLORS, FONT } from "../ui/theme";
 
@@ -10,11 +12,14 @@ export class BootScene extends Phaser.Scene {
   preload(): void {
     this.cameras.main.setBackgroundColor(COLORS.bg);
     preloadPortraits(this);
+    for (const file of BACKDROP_FILES) {
+      this.load.image(file.key, file.path);
+    }
   }
 
   create(): void {
     const { width, height } = this.scale;
-    this.cameras.main.setBackgroundColor(COLORS.bg);
+    mountBackdrop(this, BACKDROP.dongfu, { top: 280, bottom: 280, scrim: 0.45 });
 
     this.add
       .text(width / 2, height * 0.38, "修仙千年", {

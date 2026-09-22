@@ -1,4 +1,6 @@
 import Phaser from "phaser";
+import { BACKDROP } from "../assets/backdrops";
+import { TRIAL_CARD_PORTRAIT_SIZE } from "../assets/portraits";
 import { accrueIdle } from "../idle/settle";
 import { loadSave, persistSave, type SaveData } from "../save/storage";
 import { getTrialStage, TRIAL_STAGES } from "../trial/catalog";
@@ -8,9 +10,9 @@ import {
   trialStageStatus,
   trialStatusLabel,
 } from "../trial/state";
-import { TRIAL_CARD_PORTRAIT_SIZE } from "../assets/portraits";
-import { addFramedPortrait } from "../ui/portraitView";
-import { COLORS, FONT } from "../ui/theme";
+import { addLockGlyph, makeButton, mountBackdrop } from "../ui/chrome";
+import { addStandingPlate } from "../ui/portraitView";
+import { COLORS, FONT, PALETTE } from "../ui/theme";
 
 export class TrialSelectScene extends Phaser.Scene {
   private save!: SaveData;
@@ -23,55 +25,54 @@ export class TrialSelectScene extends Phaser.Scene {
   create(): void {
     this.save = loadSave();
     const { width, height } = this.scale;
-    this.cameras.main.setBackgroundColor(COLORS.bg);
+    mountBackdrop(this, BACKDROP.trial, { top: 160, bottom: 200, scrim: 0.62 });
 
     this.add
-      .text(width / 2, 64, "试炼", {
+      .text(width / 2, 52, "试炼", {
         fontFamily: FONT,
         fontSize: "40px",
         color: COLORS.text,
       })
-      .setOrigin(0.5);
-
-    this.add
-      .text(width / 2, 112, "通关第 N 关解锁第 N+1 关 · 敌人与灵石随关卡增强", {
-        fontFamily: FONT,
-        fontSize: "16px",
-        color: COLORS.muted,
-      })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(6);
 
     const next = getTrialStage(nextUnlockedStageId(this.save.trial.highestCleared));
     const progress =
       this.save.trial.highestCleared >= TRIAL_STAGES.length
-        ? "已通最高：三关均已通关"
-        : `已通最高：${this.save.trial.highestCleared === 0 ? "尚未通关" : `第${this.save.trial.highestCleared}关`} · 下一关 第${next.id}关`;
+        ? "三关均已通关"
+        : this.save.trial.highestCleared === 0
+          ? `下一关  第${next.id}关 ${next.name}`
+          : `已通第${this.save.trial.highestCleared}关  ·  下一关 第${next.id}关 ${next.name}`;
     this.add
-      .text(width / 2, 152, progress, {
+      .text(width / 2, 100, progress, {
         fontFamily: FONT,
         fontSize: "18px",
         color: COLORS.heroHex,
+        align: "center",
+        wordWrap: { width: 640 },
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(6);
 
     TRIAL_STAGES.forEach((stage, index) => {
-      this.drawStageCard(stage.id, 248 + index * 210);
+      this.drawStageCard(stage.id, 310 + index * 292);
     });
 
     this.hint = this.add
-      .text(width / 2, 900, "点已解锁关卡进入战斗。失败不发灵石，可重复挑战已通关卡。", {
+      .text(width / 2, height - 168, "", {
         fontFamily: FONT,
         fontSize: "16px",
         color: COLORS.muted,
         align: "center",
-        wordWrap: { width: 600 },
+        wordWrap: { width: 620 },
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(6);
 
-    this.makeButton(width / 2, height - 88, "返回洞府", () => {
+    makeButton(this, width / 2, height - 88, 280, 72, "返回洞府", () => {
       persistSave(this.save);
       this.scene.start("Hub");
-    });
+    }, { tone: "gold", fontSize: 26, depth: 8 });
   }
 
   private drawStageCard(stageId: number, y: number): void {
@@ -80,54 +81,77 @@ export class TrialSelectScene extends Phaser.Scene {
     const status = trialStageStatus(this.save.trial.highestCleared, stage.id);
     const unlocked = isTrialStageUnlocked(this.save.trial.highestCleared, stage.id);
     const isNext = status === "next";
+    const cardW = 660;
+    const cardH = 268;
+
+    const root = this.add.container(width / 2, y).setDepth(4);
     const bg = this.add
-      .rectangle(width / 2, y, 620, 186, isNext ? 0x2a2410 : COLORS.panel)
-      .setStrokeStyle(2, isNext ? COLORS.hero : COLORS.panelStroke)
-      .setInteractive({ useHandCursor: unlocked });
+      .rectangle(0, 0, cardW, cardH, PALETTE.ink, unlocked ? 0.9 : 0.72)
+      .setStrokeStyle(2, isNext ? PALETTE.cinnabar : PALETTE.gold)
+      .setInteractive({ useHandCursor: true });
+    root.add(bg);
 
-    addFramedPortrait(this, width / 2 - 236, y, stage.enemies[0]?.portraitKey, TRIAL_CARD_PORTRAIT_SIZE, {
-      stroke: isNext ? COLORS.hero : COLORS.panelStroke,
-      fill: COLORS.empty,
-    });
+    const plate = addStandingPlate(
+      this,
+      width / 2 - 200,
+      y + 112,
+      stage.enemies[0]?.portraitKey,
+      TRIAL_CARD_PORTRAIT_SIZE,
+      { depth: 5, stroke: isNext ? PALETTE.cinnabar : PALETTE.gold },
+    );
+    plate.frame.setDepth(5);
+    plate.portrait?.setDepth(6);
+    if (!unlocked) {
+      plate.frame.setAlpha(0.45);
+      plate.portrait?.setAlpha(0.45);
+      bg.setAlpha(0.55);
+    }
 
-    const textX = width / 2 + 40;
-    this.add
-      .text(textX, y - 62, `第${stage.id}关  ${stage.name}`, {
+    const textX = 90;
+    const title = this.add
+      .text(textX, -78, `第${stage.id}关  ${stage.name}`, {
         fontFamily: FONT,
-        fontSize: "26px",
+        fontSize: "28px",
         color: COLORS.text,
       })
       .setOrigin(0.5);
-
     const enemyNames = stage.enemies.map((enemy) => enemy.name).join(" / ");
-    this.add
-      .text(textX, y - 24, `敌人 ${enemyNames}  ·  血 ${stage.enemies[0]?.hp ?? 0} 起`, {
+    const meta = this.add
+      .text(textX, -32, `${enemyNames}  ·  血 ${stage.enemies[0]?.hp ?? 0} 起`, {
         fontFamily: FONT,
         fontSize: "16px",
         color: COLORS.muted,
       })
       .setOrigin(0.5);
-
-    this.add
-      .text(textX, y + 8, `胜利 ${stage.stones} 灵石`, {
+    const reward = this.add
+      .text(textX, 2, `胜利 ${stage.stones} 灵石`, {
         fontFamily: FONT,
         fontSize: "18px",
         color: COLORS.log,
       })
       .setOrigin(0.5);
-
-    const statusLine = unlocked
-      ? `${trialStatusLabel(status)}  ·  ${status === "cleared" ? "再次挑战" : "进入战斗"}`
-      : trialStatusLabel(status);
-    this.add
-      .text(textX, y + 48, statusLine, {
+    const tag = this.add
+      .text(textX, 36, trialStatusLabel(status), {
         fontFamily: FONT,
-        fontSize: "18px",
+        fontSize: "16px",
         color: unlocked ? COLORS.heroHex : COLORS.muted,
       })
       .setOrigin(0.5);
+    root.add([title, meta, reward, tag]);
 
     bg.on("pointerdown", () => this.tryEnter(stage.id));
+
+    if (unlocked) {
+      makeButton(this, width / 2 + 90, y + 82, 200, 64, "挑战", () => this.tryEnter(stage.id), {
+        tone: isNext ? "cinnabar" : "gold",
+        fontSize: 26,
+        depth: 7,
+      });
+      return;
+    }
+
+    addLockGlyph(this, width / 2 + 90, y + 78, 7);
+    root.setAlpha(0.92);
   }
 
   private tryEnter(stageId: number): void {
@@ -140,23 +164,5 @@ export class TrialSelectScene extends Phaser.Scene {
     this.save = save;
     persistSave(this.save);
     this.scene.start("Battle", { mode: "trial", stageId });
-  }
-
-  private makeButton(x: number, y: number, label: string, onClick: () => void): void {
-    const bg = this.add.rectangle(x, y, 280, 64, COLORS.hero).setInteractive({ useHandCursor: true });
-    const text = this.add
-      .text(x, y, label, {
-        fontFamily: FONT,
-        fontSize: "24px",
-        color: "#1a1204",
-      })
-      .setOrigin(0.5);
-    bg.on("pointerdown", () => {
-      bg.setFillStyle(0xf0d070);
-      onClick();
-    });
-    bg.on("pointerover", () => bg.setFillStyle(0xe8b84a));
-    bg.on("pointerout", () => bg.setFillStyle(COLORS.hero));
-    text.setDepth(1);
   }
 }
