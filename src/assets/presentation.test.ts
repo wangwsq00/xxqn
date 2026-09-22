@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { ATB_MAX } from "../combat/constants";
-import { BattleEngine } from "../combat/engine";
+import { BattleEngine, compareReady } from "../combat/engine";
 import { makeCombatant } from "../combat/factory";
 import type { CombatStats } from "../combat/types";
 import { DOCK_HIT_HEIGHT } from "../ui/theme";
 import {
   atbFillRatio,
   PRESENTATION_FILES,
+  speedBarIconX,
   spiritArrayFx,
   spiritArrayTier,
 } from "./presentation";
@@ -73,12 +74,81 @@ describe("M2 presentation files", () => {
 });
 
 describe("M2 shared speed bar mapping", () => {
-  it("clamps the engine ATB onto 0..1", () => {
+  it("clamps the engine ATB onto 0..1 and never reads speed", () => {
     expect(atbFillRatio(0)).toBe(0);
     expect(atbFillRatio(ATB_MAX / 2)).toBeCloseTo(0.5);
     expect(atbFillRatio(ATB_MAX)).toBe(1);
     expect(atbFillRatio(ATB_MAX + 200)).toBe(1);
     expect(atbFillRatio(-10)).toBe(0);
+    const fast = makeCombatant({
+      id: "fast",
+      name: "快",
+      side: "ally",
+      slot: 1,
+      stats: stats(500),
+    });
+    const slow = makeCombatant({
+      id: "slow",
+      name: "慢",
+      side: "enemy",
+      slot: 5,
+      stats: stats(20),
+    });
+    fast.atb = 400;
+    slow.atb = 400;
+    expect(speedBarIconX(10, 200, fast.atb)).toBe(speedBarIconX(10, 200, slow.atb));
+    expect(speedBarIconX(10, 200, 0)).toBe(10);
+    expect(speedBarIconX(10, 200, ATB_MAX)).toBe(210);
+  });
+
+  it("breaks a full-bar pile with the engine order: speed, then slot, then allies", () => {
+    const allyFastSlot2 = makeCombatant({
+      id: "ally-fast-slot2",
+      name: "甲",
+      side: "ally",
+      slot: 2,
+      stats: stats(80),
+    });
+    const allyFastSlot1 = makeCombatant({
+      id: "ally-fast-slot1",
+      name: "乙",
+      side: "ally",
+      slot: 1,
+      stats: stats(80),
+    });
+    const enemyFastSlot1 = makeCombatant({
+      id: "enemy-fast-slot1",
+      name: "丙",
+      side: "enemy",
+      slot: 1,
+      stats: stats(80),
+    });
+    const slow = makeCombatant({
+      id: "slow",
+      name: "丁",
+      side: "ally",
+      slot: 1,
+      stats: stats(10),
+    });
+    const piled = [allyFastSlot2, enemyFastSlot1, slow, allyFastSlot1];
+    for (const unit of piled) {
+      unit.atb = ATB_MAX;
+    }
+    expect([...piled].sort(compareReady).map((unit) => unit.id)).toEqual([
+      "ally-fast-slot1",
+      "enemy-fast-slot1",
+      "ally-fast-slot2",
+      "slow",
+    ]);
+    const engine = new BattleEngine(piled);
+    const acted: string[] = [];
+    for (let i = 0; i < 4; i += 1) {
+      const action = engine.tick();
+      expect(action).not.toBeNull();
+      acted.push(action!.actorId);
+      expect(engine.units.find((unit) => unit.id === action!.actorId)?.atb).toBe(0);
+    }
+    expect(acted).toEqual(["ally-fast-slot1", "enemy-fast-slot1", "ally-fast-slot2", "slow"]);
   });
 
   it("follows real ATB so a fast unit can act twice before a slow unit acts", () => {

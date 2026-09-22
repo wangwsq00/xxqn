@@ -304,17 +304,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private syncSpeed(): void {
-    this.speedBar?.sync(
-      this,
-      this.engine.units.map((unit) => ({
-        id: unit.id,
-        side: unit.side,
-        atb: unit.atb,
-        alive: unit.alive,
-        portraitKey: unit.portraitKey,
-      })),
-      this.actingId,
-    );
+    this.speedBar?.sync(this, this.engine.units, this.actingId);
   }
 
   private refreshLog(): void {

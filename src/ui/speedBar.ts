@@ -1,29 +1,23 @@
 import Phaser from "phaser";
-import { atbFillRatio } from "../assets/presentation";
+import { speedBarIconX } from "../assets/presentation";
+import { compareReady } from "../combat/engine";
+import type { Combatant } from "../combat/types";
 import { hasPortrait } from "./portraitView";
 import { ensureFaceDisc } from "./softPortrait";
 import { PALETTE } from "./theme";
 
-export interface SpeedBarEntry {
-  id: string;
-  side: "ally" | "enemy";
-  atb: number;
-  alive: boolean;
-  portraitKey?: string;
-}
-
 interface SpeedIcon {
   root: Phaser.GameObjects.Container;
   ring: Phaser.GameObjects.Graphics;
-  side: SpeedBarEntry["side"];
+  side: Combatant["side"];
 }
 
 const ICON = 34;
 
 /**
- * 一条共用行动条。图标横坐标只读战斗单位当前 `atb`。
- * `actingId` 把刚出手的单位钉在终点（引擎在同一 tick 已把 atb 清零），
- * 动画结束后再按真实 0 跳回起点，避免倒着滑回去。
+ * 一条共用行动条。小头像 X = atb / ATB_MAX。
+ * 出手后引擎把 atb 设为 0，图标跟着回到起点，不另做计时，也不用速度当坐标。
+ * 同一帧堆在终点时，层次用 `compareReady`（速度高、槽位小、我方在前）。
  */
 export class SharedSpeedBar {
   private readonly icons = new Map<string, SpeedIcon>();
@@ -49,7 +43,7 @@ export class SharedSpeedBar {
     g.lineBetween(right - 10, y - 16, right - 10, y + 16);
   }
 
-  sync(scene: Phaser.Scene, units: SpeedBarEntry[], actingId?: string | null): void {
+  sync(scene: Phaser.Scene, units: Combatant[], actingId?: string | null): void {
     const living = units.filter((unit) => unit.alive);
     const livingIds = new Set(living.map((unit) => unit.id));
     for (const [id, icon] of this.icons) {
@@ -65,39 +59,26 @@ export class SharedSpeedBar {
       }
     }
 
+    const pile = [...living].sort(compareReady);
+    const depthOf = new Map(pile.map((unit, index) => [unit.id, 56 + pile.length - index]));
+
     for (const unit of living) {
       const acting = unit.id === actingId;
-      const ratio = acting ? 1 : atbFillRatio(unit.atb);
-      const x = this.trackLeft + ratio * this.trackSpan;
+      const x = speedBarIconX(this.trackLeft, this.trackSpan, unit.atb);
       let icon = this.icons.get(unit.id);
-      const born = !icon;
       if (!icon) {
         icon = this.createIcon(scene, unit);
-        icon.root.x = x;
         this.icons.set(unit.id, icon);
       }
+      icon.root.x = x;
       icon.root.y = this.y;
-      if (!born) {
-        if (x + 20 < icon.root.x) {
-          scene.tweens.killTweensOf(icon.root);
-          icon.root.x = x;
-        } else if (Math.abs(x - icon.root.x) > 0.5) {
-          scene.tweens.killTweensOf(icon.root);
-          scene.tweens.add({
-            targets: icon.root,
-            x,
-            duration: 90,
-            ease: "Linear",
-          });
-        }
-      }
       this.paintRing(icon, acting);
       icon.root.setScale(acting ? 1.22 : 1);
-      icon.root.setDepth(56 + Math.round(ratio * 6) + (acting ? 4 : 0));
+      icon.root.setDepth(depthOf.get(unit.id) ?? 56);
     }
   }
 
-  private createIcon(scene: Phaser.Scene, unit: SpeedBarEntry): SpeedIcon {
+  private createIcon(scene: Phaser.Scene, unit: Combatant): SpeedIcon {
     const root = scene.add.container(this.trackLeft, this.y).setDepth(56);
     const faceKey =
       unit.portraitKey && hasPortrait(scene, unit.portraitKey)

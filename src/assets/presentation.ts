@@ -113,12 +113,20 @@ export function spiritArrayFx(tier: ArrayTier): SpiritArrayFx {
   };
 }
 
-/** 把战斗引擎已有的 ATB 映射到速度条 0..1。满条为 1，不另起计时。 */
+/**
+ * 速度条进度。只读 `Combatant.atb / ATB_MAX`。
+ * 速度只决定引擎每 tick 加多少 atb，不能拿来当横坐标。
+ */
 export function atbFillRatio(atb: number, atbMax = ATB_MAX): number {
   if (!Number.isFinite(atb) || !Number.isFinite(atbMax) || atbMax <= 0) {
     return 0;
   }
   return Math.max(0, Math.min(1, atb / atbMax));
+}
+
+/** 小头像横坐标。0 在起点，1 在终点。参数里没有速度。 */
+export function speedBarIconX(trackLeft: number, trackSpan: number, atb: number, atbMax = ATB_MAX): number {
+  return trackLeft + trackSpan * atbFillRatio(atb, atbMax);
 }
 
 export function preloadPresentation(scene: {
