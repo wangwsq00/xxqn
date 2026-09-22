@@ -8,6 +8,8 @@ import {
   PORTRAIT,
 } from "../assets/portraits";
 import {
+  HUB_MEDITATE,
+  HUB_MEDITATE_HEIGHT,
   spiritArrayFx,
   spiritArrayTextureKey,
   spiritArrayTier,
@@ -199,8 +201,10 @@ export class HubScene extends Phaser.Scene {
       });
     }
 
+    const seated = this.textures.exists(HUB_MEDITATE);
+    const bodyH = seated ? HUB_MEDITATE_HEIGHT : HUB_HERO_HEIGHT;
     const glow = this.add
-      .circle(feetX, feetY - HUB_HERO_HEIGHT * 0.4, fx.glowRadius, PALETTE.cyan, fx.glowAlpha)
+      .circle(feetX, feetY - bodyH * (seated ? 0.48 : 0.4), fx.glowRadius, PALETTE.cyan, fx.glowAlpha)
       .setDepth(4)
       .setBlendMode(Phaser.BlendModes.ADD);
     this.tweens.add({
@@ -213,10 +217,20 @@ export class HubScene extends Phaser.Scene {
       ease: "Sine.easeInOut",
     });
 
-    const heroKey = ensureSoftBody(this, PORTRAIT.playerHero, HUB_HERO_HEIGHT);
-    if (heroKey) {
-      const heroRoot = this.add.container(feetX, feetY).setDepth(8);
-      heroRoot.add(this.add.image(0, 0, heroKey).setOrigin(0.5, 1));
+    const heroRoot = this.add.container(feetX, feetY).setDepth(8);
+    if (seated) {
+      const frame = this.textures.getFrame(HUB_MEDITATE);
+      const displayW = Math.round(bodyH * (frame.width / frame.height));
+      heroRoot.add(
+        this.add.image(0, 0, HUB_MEDITATE).setOrigin(0.5, 1).setDisplaySize(displayW, bodyH),
+      );
+    } else {
+      const heroKey = ensureSoftBody(this, PORTRAIT.playerHero, HUB_HERO_HEIGHT);
+      if (heroKey) {
+        heroRoot.add(this.add.image(0, 0, heroKey).setOrigin(0.5, 1));
+      }
+    }
+    if (heroRoot.length > 0) {
       this.tweens.add({
         targets: heroRoot,
         scaleX: 1.02,
@@ -226,6 +240,8 @@ export class HubScene extends Phaser.Scene {
         repeat: -1,
         ease: "Sine.easeInOut",
       });
+    } else {
+      heroRoot.destroy();
     }
 
     const pet = this.save.pets.equippedId ? getPetDef(this.save.pets.equippedId) : undefined;
@@ -245,9 +261,12 @@ export class HubScene extends Phaser.Scene {
       this.add
         .particles(feetX, feetY - 6, mote, {
           x: { min: -60 - tier * 22, max: 60 + tier * 22 },
-          speedY: { min: -fx.moteSpeed * 1.25, max: -fx.moteSpeed * 0.75 },
+          speedY: {
+            min: -fx.moteSpeed * 1.25 * (seated ? bodyH / HUB_HERO_HEIGHT : 1),
+            max: -fx.moteSpeed * 0.75 * (seated ? bodyH / HUB_HERO_HEIGHT : 1),
+          },
           speedX: { min: -16, max: 16 },
-          lifespan: { min: 680, max: 1080 },
+          lifespan: seated ? { min: 860, max: 1320 } : { min: 680, max: 1080 },
           frequency: fx.particleFrequency,
           scale: { start: 0.28 + tier * 0.12, end: 0 },
           alpha: { start: 0.9, end: 0 },

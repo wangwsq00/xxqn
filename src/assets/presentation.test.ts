@@ -4,8 +4,11 @@ import { BattleEngine, compareReady } from "../combat/engine";
 import { makeCombatant } from "../combat/factory";
 import type { CombatStats } from "../combat/types";
 import { DOCK_HIT_HEIGHT } from "../ui/theme";
+import { HUB_HERO_FEET_Y } from "./portraits";
 import {
   atbFillRatio,
+  HUB_MEDITATE,
+  HUB_MEDITATE_HEIGHT,
   PRESENTATION_FILES,
   speedBarIconX,
   spiritArrayFx,
@@ -68,7 +71,10 @@ describe("M2 presentation files", () => {
       "assets/fx/array_tier1.png",
       "assets/fx/array_tier2.png",
       "assets/fx/array_tier3.png",
+      "assets/char/hero_meditate.png",
     ]);
+    expect(PRESENTATION_FILES.some((file) => file.key === HUB_MEDITATE)).toBe(true);
+    expect(HUB_HERO_FEET_Y - HUB_MEDITATE_HEIGHT).toBeGreaterThanOrEqual(240);
     expect(DOCK_HIT_HEIGHT).toBeGreaterThanOrEqual(88);
   });
 });

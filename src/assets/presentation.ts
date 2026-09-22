@@ -14,6 +14,15 @@ export const SPIRIT_ARRAY = {
   tier3: "array_tier3",
 } as const;
 
+/** 洞府打坐莲座全身像。头像和战斗仍用 player_hero。 */
+export const HUB_MEDITATE = "hero_meditate";
+
+/**
+ * 莲座图显示高度。脚底仍是 portraits 里的 (360, 780)。
+ * 比半身立绘略高，头顶留在修为条文案下面。
+ */
+export const HUB_MEDITATE_HEIGHT = 500;
+
 export interface PresentationFile {
   key: string;
   path: string;
@@ -26,6 +35,7 @@ export const PRESENTATION_FILES: PresentationFile[] = [
   { key: SPIRIT_ARRAY.tier1, path: "assets/fx/array_tier1.png" },
   { key: SPIRIT_ARRAY.tier2, path: "assets/fx/array_tier2.png" },
   { key: SPIRIT_ARRAY.tier3, path: "assets/fx/array_tier3.png" },
+  { key: HUB_MEDITATE, path: "assets/char/hero_meditate.png" },
 ];
 
 export type ArrayTier = 1 | 2 | 3;
