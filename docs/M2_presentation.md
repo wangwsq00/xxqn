@@ -10,13 +10,13 @@
 
 阶越高，转得越快、呼吸越快（仍在 2.4–3.2 秒内）、粒子越密、光越亮。
 
-逻辑 id 与官方路径见 [`M1_presentation_v2.md`](M1_presentation_v2.md) §3.4。官方切图还没进仓库时，用先前的文件：
+逻辑 id 与官方路径见 [`M1_presentation_v2.md`](M1_presentation_v2.md) §3.4。官方法阵 **已入仓**，Boot 优先加载下表文件；官方文件缺失时才用旧的 `array_tier*.png`。
 
-| 条件 | 阶 | 逻辑 id | 当前文件 |
-|------|----|---------|----------|
-| 聚灵阵 1–3 级 | 1 | `fx_array_low` | `public/assets/fx/array_tier1.png` |
-| 聚灵阵 4–6 级 | 2 | `fx_array_mid` | `public/assets/fx/array_tier2.png` |
-| 聚灵阵 7–10 级 | 3 | `fx_array_high` | `public/assets/fx/array_tier3.png` |
+| 条件 | 阶 | 逻辑 id | 已入仓文件 |
+|------|----|---------|------------|
+| 聚灵阵 1–3 级 | 1 | `fx_array_low` | `public/assets/fx/array/fx_array_low.png` |
+| 聚灵阵 4–6 级 | 2 | `fx_array_mid` | `public/assets/fx/array/fx_array_mid.png` |
+| 聚灵阵 7–10 级 | 3 | `fx_array_high` | `public/assets/fx/array/fx_array_high.png` |
 
 等级为 0、缺失或不是数字时，改按大境：炼气–金丹一阶，元婴–炼虚二阶，合体–渡劫三阶。
 
@@ -24,13 +24,13 @@
 
 洞府底栏仍是 **洞府 / 试炼 / 养成**，跳转不变。图标在短标签上面。热区沿用 `DOCK_HIT_HEIGHT`（120，不小于 88）。选中是朱砂底加赤金描边，不是纯文字砖。
 
-| 标签 | 逻辑 id | 当前文件 |
-|------|---------|----------|
-| 洞府 | `icon_tab_dongfu` | `public/assets/ui/icon_dongfu.png` |
-| 试炼 | `icon_tab_trial` | `public/assets/ui/icon_trial.png` |
-| 养成 | `icon_tab_cultivate` | `public/assets/ui/icon_growth.png` |
+| 标签 | 逻辑 id | 已入仓文件 |
+|------|---------|------------|
+| 洞府 | `icon_tab_dongfu` | `public/assets/ui/icons/icon_tab_dongfu.png` |
+| 试炼 | `icon_tab_trial` | `public/assets/ui/icons/icon_tab_trial.png` |
+| 养成 | `icon_tab_cultivate` | `public/assets/ui/icons/icon_tab_cultivate.png` |
 
-官方默认 / 选中图（256 / 128）进 `public/assets/ui/icons/` 后会自动换上，选中图键是 `icon_tab_*_on`。没有选中图时仍用朱砂底和赤金圈。
+默认图与选中图已在 `public/assets/ui/icons/`。选中态同时有 `icon_tab_*_selected.png` 和 `icon_tab_*_on.png`（内容相同）；Boot 加载的键是 `icon_tab_*_on`。主图 128，同目录 `*_256.png` 是可选 @2x，不另预加载。没有选中图时仍用朱砂底和赤金圈。
 
 左上角圆形头像是主角脸部裁切。旁边是境界名和灵石。点头像打开「详细属性」，列出当前主角已有的生命、攻击、防御、速度、命中、闪避、暴击、抗暴击、格挡、抗格挡。数值走开战用的 `makeHero`（装备和功法加成），不另造战力。点关闭、点遮罩或再点头像可退回。顶上的「修仙千年」标题已去掉，避免和头像卡抢位置。修为条和领取按钮逻辑不变。
 
@@ -46,7 +46,7 @@
 
 ## 共用速度条
 
-战场标题下方一条横条。每个存活单位一枚圆形头像，我方青边、敌方朱砂边。正在出手的头像加一圈金边。金边不改变位置。官方 96px 圆头像在 `public/assets/ui/avatar/`，键是 `avatar_` 加立绘键。还没入库时，仍从现有立绘裁脸。
+战场标题下方一条横条。每个存活单位一枚圆形头像，我方青边、敌方朱砂边。正在出手的头像加一圈金边。金边不改变位置。官方 96px 圆头像已入仓：`public/assets/ui/avatar/avatar_*.png`（与 `avatar_mini_*.png` 同图），键是 `avatar_` 加立绘键。文件没加载到时，仍从现有立绘裁脸。
 
 横坐标只读 `Combatant.atb / ATB_MAX`。`ATB_MAX` 是 1000。引擎每秒 10 个逻辑帧，每帧 `atb = min(ATB_MAX, atb + stats.spd)`。速度只决定涨得快慢，不拿来当横坐标。出手后引擎把 `atb` 设为 0，多出来的不保留，头像跟着回到起点。
 

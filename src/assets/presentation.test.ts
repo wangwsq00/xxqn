@@ -23,6 +23,7 @@ import {
   spiritArrayFx,
   spiritArrayTier,
   UI_ICON,
+  UI_ICON_ON,
 } from "./presentation";
 
 function stats(spd: number): CombatStats {
@@ -97,15 +98,25 @@ describe("M2 presentation files", () => {
     expect(resolvePresentationFile(arrayLow!, fallbackOnly)?.path).toBe("assets/fx/array_tier1.png");
 
     const byKey = new Map(PRESENTATION_FILES.map((file) => [file.key, file.path]));
-    expect(byKey.get(UI_ICON.dongfu)).toBe("assets/ui/icon_dongfu.png");
-    expect(byKey.get(UI_ICON.trial)).toBe("assets/ui/icon_trial.png");
-    expect(byKey.get(UI_ICON.cultivate)).toBe("assets/ui/icon_growth.png");
-    expect(byKey.get("fx_array_low")).toBe("assets/fx/array_tier1.png");
-    expect(byKey.get("fx_array_mid")).toBe("assets/fx/array_tier2.png");
-    expect(byKey.get("fx_array_high")).toBe("assets/fx/array_tier3.png");
+    expect(byKey.get(UI_ICON.dongfu)).toBe("assets/ui/icons/icon_tab_dongfu.png");
+    expect(byKey.get(UI_ICON.trial)).toBe("assets/ui/icons/icon_tab_trial.png");
+    expect(byKey.get(UI_ICON.cultivate)).toBe("assets/ui/icons/icon_tab_cultivate.png");
+    expect(byKey.get(UI_ICON_ON.dongfu)).toBe("assets/ui/icons/icon_tab_dongfu_on.png");
+    expect(byKey.get(UI_ICON_ON.trial)).toBe("assets/ui/icons/icon_tab_trial_on.png");
+    expect(byKey.get(UI_ICON_ON.cultivate)).toBe("assets/ui/icons/icon_tab_cultivate_on.png");
+    expect(byKey.get("fx_array_low")).toBe("assets/fx/array/fx_array_low.png");
+    expect(byKey.get("fx_array_mid")).toBe("assets/fx/array/fx_array_mid.png");
+    expect(byKey.get("fx_array_high")).toBe("assets/fx/array/fx_array_high.png");
+    expect(byKey.get(SKILL_FX.swordqi)).toBe("assets/fx/skill/fx_skill_swordqi.png");
+    expect(byKey.get(SKILL_FX.fireball)).toBe("assets/fx/skill/fx_skill_fireball.png");
+    expect(byKey.get(SKILL_FX.shockwave)).toBe("assets/fx/skill/fx_skill_shockwave.png");
+    expect(byKey.get("avatar_player_hero")).toBe("assets/ui/avatar/avatar_player_hero.png");
+    expect(byKey.get("avatar_pet_linghu")).toBe("assets/ui/avatar/avatar_pet_linghu.png");
+    expect(byKey.get("avatar_enemy_wild")).toBe("assets/ui/avatar/avatar_enemy_wild.png");
+    expect(byKey.get("avatar_enemy_evil")).toBe("assets/ui/avatar/avatar_enemy_evil.png");
+    expect(byKey.get("avatar_enemy_demon")).toBe("assets/ui/avatar/avatar_enemy_demon.png");
+    expect(byKey.get("avatar_enemy_heart_demon")).toBe("assets/ui/avatar/avatar_enemy_heart_demon.png");
     expect(byKey.get(HUB_MEDITATE)).toBe("assets/char/hero_meditate.png");
-    expect(byKey.has(SKILL_FX.swordqi)).toBe(false);
-    expect(byKey.has("avatar_player_hero")).toBe(false);
     expect(HUB_HERO_FEET_Y - HUB_MEDITATE_HEIGHT).toBeGreaterThanOrEqual(240);
     expect(HUB_ARRAY_CENTER_X).toBe(360);
     expect(HUB_ARRAY_CENTER_Y).toBe(760);
