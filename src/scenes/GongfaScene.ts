@@ -8,7 +8,9 @@ import {
 } from "../gongfa/state";
 import type { GongfaSlotIndex } from "../gongfa/types";
 import { loadSave, persistSave, type SaveData } from "../save/storage";
-import { COLORS, FONT } from "../ui/theme";
+import { BACKDROP } from "../assets/backdrops";
+import { makeButton, mountBackdrop } from "../ui/chrome";
+import { COLORS, FONT, PALETTE } from "../ui/theme";
 
 export class GongfaScene extends Phaser.Scene {
   private save!: SaveData;
@@ -21,7 +23,7 @@ export class GongfaScene extends Phaser.Scene {
   create(): void {
     this.save = loadSave();
     const { width, height } = this.scale;
-    this.cameras.main.setBackgroundColor(COLORS.bg);
+    mountBackdrop(this, BACKDROP.dongfu, { top: 160, bottom: 220, scrim: 0.8 });
 
     this.add
       .text(width / 2, 64, "功法", {
@@ -43,7 +45,7 @@ export class GongfaScene extends Phaser.Scene {
     this.drawOwned();
 
     this.add
-      .text(width / 2, 980, "5 号槽固定普通攻击，不可更换。穿戴写入 LocalStorage。", {
+      .text(width / 2, 980, "5 号槽固定普通攻击，不可更换。", {
         fontFamily: FONT,
         fontSize: "16px",
         color: COLORS.muted,
@@ -62,10 +64,10 @@ export class GongfaScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.makeButton(width / 2, height - 88, "返回洞府", () => {
+    makeButton(this, width / 2, height - 88, 360, 72, "返回洞府", () => {
       persistSave(this.save);
       this.scene.start("Hub");
-    });
+    }, { tone: "gold", fontSize: 28, depth: 8 });
 
     const pendingHint = this.registry.get("gongfaHint") as { text: string; ok?: boolean } | undefined;
     if (pendingHint?.text) {
@@ -92,14 +94,14 @@ export class GongfaScene extends Phaser.Scene {
     const def = defId ? getGongfaDef(defId) : undefined;
     const filled = Boolean(def);
     const bg = this.add
-      .rectangle(x, y, 280, 100, filled ? COLORS.hero : COLORS.empty, filled ? 1 : 0.85)
-      .setStrokeStyle(2, filled ? 0xfff3c4 : COLORS.panelStroke);
+      .rectangle(x, y, 280, 100, filled ? PALETTE.gold : PALETTE.ink, filled ? 1 : 0.88)
+      .setStrokeStyle(2, filled ? PALETTE.stroke : PALETTE.gold);
 
     this.add
       .text(x, y - 28, GONGFA_SLOT_LABELS[slot], {
         fontFamily: FONT,
         fontSize: "16px",
-        color: filled ? "#1a1204" : COLORS.muted,
+        color: filled ? COLORS.strokeHex : COLORS.muted,
       })
       .setOrigin(0.5);
 
@@ -107,7 +109,7 @@ export class GongfaScene extends Phaser.Scene {
       .text(x, y + 4, def ? def.name : "空", {
         fontFamily: FONT,
         fontSize: "24px",
-        color: filled ? "#1a1204" : COLORS.text,
+        color: filled ? COLORS.strokeHex : COLORS.text,
       })
       .setOrigin(0.5);
 
@@ -116,7 +118,7 @@ export class GongfaScene extends Phaser.Scene {
       .text(x, y + 32, sub, {
         fontFamily: FONT,
         fontSize: "14px",
-        color: filled ? "#3a2a08" : COLORS.muted,
+        color: filled ? COLORS.strokeHex : COLORS.muted,
       })
       .setOrigin(0.5);
 
@@ -128,7 +130,7 @@ export class GongfaScene extends Phaser.Scene {
 
   private drawOwned(): void {
     const { width } = this.scale;
-    this.add.rectangle(width / 2, 720, 620, 280, COLORS.panel).setStrokeStyle(2, COLORS.panelStroke);
+    this.add.rectangle(width / 2, 720, 620, 280, PALETTE.ink, 0.9).setStrokeStyle(2, PALETTE.gold);
     this.add
       .text(width / 2, 598, "已有功法", {
         fontFamily: FONT,
@@ -145,12 +147,14 @@ export class GongfaScene extends Phaser.Scene {
       const equippedAt = equippedSlotOf(this.save.gongfa, def.id);
       const y = 668 + index * 100;
       const available = unequippedOwned(this.save.gongfa).includes(def.id);
-      const bg = this.add.rectangle(width / 2, y, 560, 86, available ? COLORS.hero : COLORS.empty);
+      const bg = this.add
+        .rectangle(width / 2, y, 560, 86, available ? PALETTE.cinnabar : PALETTE.ink, available ? 1 : 0.88)
+        .setStrokeStyle(2, available ? PALETTE.gold : PALETTE.gold);
       if (available) {
         bg.setInteractive({ useHandCursor: true });
         bg.on("pointerdown", () => this.equip(def.id));
       }
-      const titleColor = available ? "#1a1204" : COLORS.text;
+      const titleColor = available ? COLORS.body : COLORS.text;
       this.add
         .text(width / 2, y - 18, `${def.name}  ·  ${def.gradeLabel}`, {
           fontFamily: FONT,
@@ -166,7 +170,7 @@ export class GongfaScene extends Phaser.Scene {
         .text(width / 2, y + 16, sub, {
           fontFamily: FONT,
           fontSize: "14px",
-          color: available ? "#3a2a08" : COLORS.muted,
+          color: available ? COLORS.body : COLORS.muted,
           align: "center",
           wordWrap: { width: 520 },
         })
@@ -202,18 +206,4 @@ export class GongfaScene extends Phaser.Scene {
     this.persistAndReload(def ? `已卸下「${def.name}」。` : "已卸下。", false);
   }
 
-  private makeButton(x: number, y: number, label: string, onClick: () => void): void {
-    const bg = this.add.rectangle(x, y, 360, 72, COLORS.hero).setInteractive({ useHandCursor: true });
-    this.add
-      .text(x, y, label, {
-        fontFamily: FONT,
-        fontSize: "28px",
-        color: "#1a1204",
-      })
-      .setOrigin(0.5)
-      .setDepth(1);
-    bg.on("pointerdown", onClick);
-    bg.on("pointerover", () => bg.setFillStyle(0xe8b84a));
-    bg.on("pointerout", () => bg.setFillStyle(COLORS.hero));
-  }
 }

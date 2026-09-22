@@ -39,8 +39,19 @@ export const SPRITE_KEY_BY_LABEL: Record<string, PortraitKey> = {
   心魔: PORTRAIT.enemyHeartDemon,
 };
 
-export const BATTLE_PORTRAIT_SIZE = 124;
+/** 洞府主角立绘高度。脚底约 (HUB_HERO_FEET_X, HUB_HERO_FEET_Y)。 */
+export const HUB_HERO_HEIGHT = 420;
+export const HUB_HERO_FEET_X = 360;
+export const HUB_HERO_FEET_Y = 780;
+/** 灵宠高度占主角的比例，规格 55–65%，立于右后方。 */
+export const HUB_PET_HEIGHT_RATIO = 0.6;
+
+export const BATTLE_HERO_HEIGHT = 360;
+export const BATTLE_ENEMY_HEIGHT = 220;
+export const BATTLE_PET_HEIGHT = 220;
+
+export const BATTLE_PORTRAIT_SIZE = BATTLE_HERO_HEIGHT;
 export const HUB_PORTRAIT_SIZE = 96;
 export const PET_SLOT_PORTRAIT_SIZE = 128;
-export const PET_LIST_PORTRAIT_SIZE = 72;
-export const TRIAL_CARD_PORTRAIT_SIZE = 88;
+export const PET_LIST_PORTRAIT_SIZE = 88;
+export const TRIAL_CARD_PORTRAIT_SIZE = 220;
