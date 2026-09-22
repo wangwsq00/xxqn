@@ -1,12 +1,12 @@
 import Phaser from "phaser";
-import { ALLY_SLOT_X, ATB_MAX, SLOT_FOOT_Y, SLOT_ORDER_TOP_TO_BOTTOM, TICK_MS } from "../combat/constants";
+import { ALLY_SLOT_X, SLOT_FOOT_Y, SLOT_ORDER_TOP_TO_BOTTOM, TICK_MS } from "../combat/constants";
 import {
   createHeartDemonEncounter,
   createTrialEncounter,
   type BattleMode,
 } from "../combat/encounter";
 import { BattleEngine } from "../combat/engine";
-import type { ActionResult, Combatant, SlotIndex } from "../combat/types";
+import type { ActionResult, Combatant, SlotIndex, TargetResult } from "../combat/types";
 import { applyTrialVictoryRewards, formatVictoryRewardText } from "../combat/rewards";
 import { equippedWeaponName, gearBonusFromEquipment } from "../equip/state";
 import { combatSkillsFromGongfa } from "../gongfa/state";
@@ -18,8 +18,11 @@ import { getTrialStage } from "../trial/catalog";
 import { isTrialStageUnlocked } from "../trial/state";
 import { BACKDROP } from "../assets/backdrops";
 import { BATTLE_ENEMY_HEIGHT, BATTLE_HERO_HEIGHT, BATTLE_PET_HEIGHT, PORTRAIT } from "../assets/portraits";
+import { skillFxTextureId, SKILL_FX } from "../assets/presentation";
 import { makeButton, mountBackdrop, tweenBar } from "../ui/chrome";
-import { addPortrait, hasPortrait } from "../ui/portraitView";
+import { hasPortrait } from "../ui/portraitView";
+import { ensureMote, ensureSoftBody } from "../ui/softPortrait";
+import { SharedSpeedBar } from "../ui/speedBar";
 import { COLORS, FONT, PALETTE } from "../ui/theme";
 
 interface SlotView {
@@ -28,20 +31,22 @@ interface SlotView {
   rootX: number;
   rootY: number;
   root: Phaser.GameObjects.Container;
-  body: Phaser.GameObjects.Rectangle;
   portrait?: Phaser.GameObjects.Image;
   nameText: Phaser.GameObjects.Text;
-  hpBarBg: Phaser.GameObjects.Rectangle;
   hpBar: Phaser.GameObjects.Rectangle;
-  atbBarBg: Phaser.GameObjects.Rectangle;
-  atbBar: Phaser.GameObjects.Rectangle;
   hpText: Phaser.GameObjects.Text;
   displayH: number;
+  collapsed: boolean;
+  baseTint: number | null;
 }
 
-const BAR_W = 112;
-const EMPTY_SLOT_W = 120;
-const EMPTY_SLOT_H = 56;
+const BAR_W = 92;
+/** 普攻冲刺。规格 120–180ms，命中落在冲到最远处。 */
+const LUNGE_MS = 160;
+/** 命中闪白。规格 60–80ms。 */
+const HIT_FLASH_MS = 70;
+/** 功法出手前的现有表现延迟。施法条跟这段，不另加引擎前摇。 */
+const CAST_WINDUP_MS = 180;
 
 export class BattleScene extends Phaser.Scene {
   private save!: SaveData;
@@ -52,7 +57,10 @@ export class BattleScene extends Phaser.Scene {
   private slotViews: SlotView[] = [];
   private logText?: Phaser.GameObjects.Text;
   private statusText?: Phaser.GameObjects.Text;
+  private speedBar?: SharedSpeedBar;
+  private actingId: string | null = null;
   private animating = false;
+  private deferDeath = false;
   private tickCarry = 0;
   private ended = false;
   private chromeReady = false;
@@ -87,42 +95,28 @@ export class BattleScene extends Phaser.Scene {
     );
     this.views.clear();
     this.slotViews = [];
+    this.actingId = null;
     this.animating = false;
+    this.deferDeath = false;
     this.tickCarry = 0;
     this.ended = false;
 
     const { width } = this.scale;
-    mountBackdrop(this, BACKDROP.battle, { top: 120, bottom: 340, scrim: 0.55 });
+    mountBackdrop(this, BACKDROP.battle, { top: 96, bottom: 340, scrim: 0.5 });
 
     const trialStage = getTrialStage(this.stageId);
     const title =
       this.mode === "heartDemon" ? "心魔挑战" : `试炼 · 第${trialStage.id}关 ${trialStage.name}`;
     this.add
-      .text(width / 2, 44, title, {
+      .text(width / 2, 22, title, {
         fontFamily: FONT,
-        fontSize: "32px",
+        fontSize: "24px",
         color: COLORS.text,
       })
       .setOrigin(0.5)
-      .setDepth(40);
+      .setDepth(62);
 
-    this.add
-      .text(78, 44, "我方", {
-        fontFamily: FONT,
-        fontSize: "20px",
-        color: COLORS.cyanHex,
-      })
-      .setOrigin(0.5)
-      .setDepth(40);
-
-    this.add
-      .text(width - 78, 44, "敌方", {
-        fontFamily: FONT,
-        fontSize: "20px",
-        color: COLORS.cinnabarHex,
-      })
-      .setOrigin(0.5)
-      .setDepth(40);
+    this.speedBar = new SharedSpeedBar(this, 64);
 
     const hero = this.engine.units.find((unit) => unit.isHero);
     const weapon = equippedWeaponName(this.save.equipment);
@@ -198,7 +192,12 @@ export class BattleScene extends Phaser.Scene {
     while (this.tickCarry >= TICK_MS && !this.animating && !this.ended) {
       this.tickCarry -= TICK_MS;
       const action = this.engine.tick();
+      this.deferDeath = Boolean(action);
+      if (action) {
+        this.actingId = action.actorId;
+      }
       this.refreshViews();
+      this.deferDeath = false;
       if (action) {
         this.playAction(action);
         break;
@@ -208,79 +207,57 @@ export class BattleScene extends Phaser.Scene {
 
   private drawSlot(side: Combatant["side"], slot: SlotIndex, x: number, y: number): void {
     const unit = this.engine.units.find((item) => item.side === side && item.slot === slot);
-    const order = SLOT_ORDER_TOP_TO_BOTTOM.indexOf(slot);
-    const visualX = unit && !unit.isHero && side === "ally" ? x + 200 : x;
-    const root = this.add.container(visualX, y).setDepth((unit ? 12 : 2) + order);
+    if (!unit) {
+      this.add.ellipse(x, y, 68, 14, PALETTE.gold, 0.16).setDepth(2);
+      return;
+    }
 
-    const showArt = Boolean(unit && hasPortrait(this, unit.portraitKey));
-    const spriteH = unit
-      ? unit.isHero
-        ? BATTLE_HERO_HEIGHT
-        : side === "enemy"
-          ? BATTLE_ENEMY_HEIGHT
-          : BATTLE_PET_HEIGHT
-      : EMPTY_SLOT_H;
-    const body = this.add
-      .rectangle(0, 0, showArt ? spriteH : EMPTY_SLOT_W, showArt ? spriteH : EMPTY_SLOT_H, PALETTE.ink, unit ? 0.15 : 0.55)
-      .setOrigin(0.5, 1)
-      .setStrokeStyle(2, unit?.isHero ? PALETTE.gold : PALETTE.gold);
-    body.setVisible(!showArt);
-    root.add(body);
+    const order = SLOT_ORDER_TOP_TO_BOTTOM.indexOf(slot);
+    const visualX = !unit.isHero && side === "ally" ? x + 200 : x;
+    const root = this.add.container(visualX, y).setDepth(12 + order);
+    const spriteH = unit.isHero
+      ? BATTLE_HERO_HEIGHT
+      : side === "enemy"
+        ? BATTLE_ENEMY_HEIGHT
+        : BATTLE_PET_HEIGHT;
+
+    root.add(this.add.ellipse(0, 4, spriteH * 0.42, 16, PALETTE.stroke, 0.4));
 
     let portrait: Phaser.GameObjects.Image | undefined;
-    if (unit && hasPortrait(this, unit.portraitKey)) {
-      portrait = addPortrait(this, 0, 0, unit.portraitKey, spriteH, { x: 0.5, y: 1 });
+    let baseTint: number | null = null;
+    if (hasPortrait(this, unit.portraitKey)) {
+      const key = ensureSoftBody(this, unit.portraitKey, spriteH) ?? unit.portraitKey;
+      portrait = this.add.image(0, 0, key).setOrigin(0.5, 1);
       if (unit.portraitKey === PORTRAIT.enemyHeartDemon) {
-        portrait.setTint(0xe8d6ff);
+        baseTint = 0xe8d6ff;
+        portrait.setTint(baseTint);
       }
       root.add(portrait);
     }
 
-    const weapon = unit?.isHero ? equippedWeaponName(this.save.equipment) : undefined;
-    const title =
-      unit?.isHero && slot === 1
-        ? `${unit.name} · ${weapon ?? "中"}`
-        : unit
-          ? `${unit.name} · ${slot}`
-          : "";
-    const nameY = showArt ? -spriteH + 16 : -EMPTY_SLOT_H - 4;
+    const head = -spriteH;
     const nameText = this.add
-      .text(0, nameY, title, {
+      .text(0, head - 18, unit.name, {
         fontFamily: FONT,
-        fontSize: "15px",
-        color: unit ? COLORS.text : COLORS.muted,
+        fontSize: "14px",
+        color: COLORS.text,
         stroke: "#0E1620",
-        strokeThickness: unit ? 4 : 0,
-      })
-      .setOrigin(0.5, 0);
-    const barW = showArt ? Math.min(200, spriteH - 28) : BAR_W;
-    const barY = showArt ? -spriteH + 40 : -14;
-    const plate = this.add
-      .rectangle(0, showArt ? -spriteH + 36 : -16, barW + 20, showArt ? 58 : 28, PALETTE.ink, unit ? 0.88 : 0)
-      .setStrokeStyle(unit ? 2 : 0, PALETTE.gold);
-    const hpBarBg = this.add.rectangle(0, barY, barW, 12, COLORS.hpBg).setOrigin(0.5).setAlpha(unit ? 1 : 0);
-    const hpBar = this.add.rectangle(-barW / 2, barY, barW, 12, COLORS.hp).setOrigin(0, 0.5);
-    hpBar.setAlpha(unit ? 1 : 0);
-    const atbBarBg = this.add.rectangle(0, barY + 16, barW, 8, COLORS.atbBg).setOrigin(0.5).setAlpha(unit ? 1 : 0);
-    const atbBar = this.add.rectangle(-barW / 2, barY + 16, barW, 8, COLORS.atb).setOrigin(0, 0.5);
-    atbBar.setAlpha(unit ? 1 : 0);
-    const hpText = this.add
-      .text(0, barY - 16, unit ? `${unit.stats.hp}/${unit.stats.maxHp}` : "", {
-        fontFamily: FONT,
-        fontSize: "13px",
-        color: COLORS.parchment,
-        stroke: "#0E1620",
-        strokeThickness: unit ? 3 : 0,
+        strokeThickness: 3,
       })
       .setOrigin(0.5, 1);
-    root.add([plate, nameText, hpBarBg, hpBar, atbBarBg, atbBar, hpText]);
-    if (!unit) {
-      body.setSize(56, 8).setFillStyle(PALETTE.gold, 0.35).setStrokeStyle(0);
-      plate.setVisible(false);
-      nameText.setVisible(false);
-    } else if (!showArt) {
-      plate.setVisible(false);
-    }
+    const barY = head - 8;
+    const hpBarBg = this.add.rectangle(0, barY, BAR_W, 8, COLORS.hpBg).setOrigin(0.5);
+    const hpBar = this.add.rectangle(-BAR_W / 2, barY, BAR_W, 8, COLORS.hp).setOrigin(0, 0.5);
+    const hpText = this.add
+      .text(0, barY - 8, `${unit.stats.hp}/${unit.stats.maxHp}`, {
+        fontFamily: FONT,
+        fontSize: "12px",
+        color: COLORS.parchment,
+        stroke: "#0E1620",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 1);
+    root.add([nameText, hpBarBg, hpBar, hpText]);
 
     const view: SlotView = {
       slot,
@@ -288,50 +265,53 @@ export class BattleScene extends Phaser.Scene {
       rootX: visualX,
       rootY: y,
       root,
-      body,
       portrait,
       nameText,
-      hpBarBg,
       hpBar,
-      atbBarBg,
-      atbBar,
       hpText,
       displayH: spriteH,
+      collapsed: false,
+      baseTint,
     };
     this.slotViews.push(view);
-    if (unit) {
-      this.views.set(unit.id, view);
-    }
+    this.views.set(unit.id, view);
   }
 
   private refreshViews(): void {
     for (const view of this.slotViews) {
       const unit = this.engine.units.find((item) => item.side === view.side && item.slot === view.slot);
       if (!unit) {
-        view.hpBar.scaleX = 0;
-        view.atbBar.scaleX = 0;
         continue;
       }
       const hpRatio = unit.stats.maxHp <= 0 ? 0 : unit.stats.hp / unit.stats.maxHp;
-      const atbRatio = unit.alive ? unit.atb / ATB_MAX : 0;
+      if (!unit.alive) {
+        view.hpText.setText("阵亡");
+        if (this.chromeReady) {
+          tweenBar(this, view.hpBar, 0, 120);
+        } else {
+          view.hpBar.scaleX = 0;
+        }
+        if (!view.collapsed && !this.deferDeath) {
+          this.collapse(view);
+        }
+        continue;
+      }
       if (this.chromeReady) {
         tweenBar(this, view.hpBar, hpRatio, 160);
-        tweenBar(this, view.atbBar, atbRatio, 80);
       } else {
         view.hpBar.scaleX = Math.max(0, hpRatio);
-        view.atbBar.scaleX = Math.max(0, Math.min(1, atbRatio));
       }
       view.hpText.setText(
-        unit.alive
-          ? unit.shieldHp > 0
-            ? `${unit.stats.hp}/${unit.stats.maxHp} 盾${unit.shieldHp}`
-            : `${unit.stats.hp}/${unit.stats.maxHp}`
-          : "阵亡",
+        unit.shieldHp > 0
+          ? `${unit.stats.hp}/${unit.stats.maxHp} 盾${unit.shieldHp}`
+          : `${unit.stats.hp}/${unit.stats.maxHp}`,
       );
-      const fade = unit.alive ? 1 : 0.38;
-      view.body.setAlpha(fade);
-      view.portrait?.setAlpha(fade);
     }
+    this.syncSpeed();
+  }
+
+  private syncSpeed(): void {
+    this.speedBar?.sync(this, this.engine.units, this.actingId);
   }
 
   private refreshLog(): void {
@@ -346,53 +326,25 @@ export class BattleScene extends Phaser.Scene {
     const actorView = this.views.get(action.actorId);
     this.statusText?.setText(`${actor?.name ?? "单位"} 使用 ${action.skillName}`);
 
-    if (actorView) {
-      this.tweens.add({
-        targets: actorView.root,
-        scaleX: 1.08,
-        scaleY: 1.08,
-        yoyo: true,
-        duration: 120,
-      });
+    const impactAt = action.isBasicAttack ? LUNGE_MS : CAST_WINDUP_MS;
+    if (actorView && action.isBasicAttack) {
+      this.lunge(actorView, action);
+    } else if (actorView) {
+      this.castPose(actorView, action);
+      this.showCastBar(actorView, CAST_WINDUP_MS);
     }
 
-    const floaters: { x: number; y: number; text: string; color: string; scale: number }[] = [];
-    for (const target of action.targets) {
-      const view = this.views.get(target.targetId);
-      if (!view) {
-        continue;
-      }
-      for (const segment of target.segments) {
-        if (segment.trigger === "skip") {
-          continue;
-        }
-        if (segment.trigger === "miss") {
-          floaters.push({ x: view.rootX, y: view.rootY - view.displayH * 0.55, text: "闪避", color: COLORS.muted, scale: 1 });
-        } else {
-          const parts = [String(segment.damage)];
-          if (segment.crit) {
-            parts.unshift("暴击");
-          }
-          if (segment.blocked) {
-            parts.push("格挡");
-          }
-          floaters.push({
-            x: view.rootX,
-            y: view.rootY - view.displayH * 0.55,
-            text: parts.join(" "),
-            color: segment.crit ? "#ffb347" : "#fff6d8",
-            scale: segment.crit ? 1.25 : 1,
-          });
-        }
-      }
-    }
-
-    const delay = 220;
-    floaters.forEach((floater, index) => {
-      this.time.delayedCall(index * delay, () => this.spawnFloater(floater));
+    action.targets.forEach((target, index) => {
+      this.time.delayedCall(impactAt + index * 30, () => this.impactTarget(action, target));
     });
-    const wait = Math.max(360, floaters.length * delay + 200);
+
+    const floaterCount = action.targets.reduce(
+      (count, target) => count + target.segments.filter((segment) => segment.trigger !== "skip").length,
+      0,
+    );
+    const wait = impactAt + Math.max(340, floaterCount * 180 + 140);
     this.time.delayedCall(wait, () => {
+      this.actingId = null;
       this.refreshViews();
       this.refreshLog();
       this.animating = false;
@@ -402,12 +354,227 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
+  private lunge(view: SlotView, action: ActionResult): void {
+    const primaryId = action.targets[0]?.targetId;
+    const primary = primaryId ? this.views.get(primaryId) : undefined;
+    const dir = primary ? Math.sign(primary.rootX - view.rootX) || 1 : view.side === "ally" ? 1 : -1;
+    const dy = primary ? Math.max(-48, Math.min(48, (primary.rootY - view.rootY) * 0.28)) : 0;
+    if (view.portrait) {
+      view.portrait.setTint(0xffe7a8);
+      this.time.delayedCall(LUNGE_MS, () => this.restorePortrait(view));
+    }
+    this.tweens.add({
+      targets: view.root,
+      x: view.rootX + dir * 96,
+      y: view.rootY + dy,
+      duration: LUNGE_MS,
+      yoyo: true,
+      ease: "Quad.easeOut",
+    });
+  }
+
+  private castPose(view: SlotView, action: ActionResult): void {
+    this.tweens.add({
+      targets: view.root,
+      scaleX: 1.1,
+      scaleY: 1.1,
+      duration: 130,
+      yoyo: true,
+      ease: "Sine.easeOut",
+    });
+    if (view.portrait) {
+      view.portrait.setTint(view.side === "ally" ? 0xc8fff8 : 0xffc2b0);
+      this.time.delayedCall(170, () => this.restorePortrait(view));
+    }
+    const fxId = skillFxTextureId(action.skillName);
+    if (fxId === SKILL_FX.shockwave && this.textures.exists(fxId)) {
+      this.spawnShockwave(view, fxId);
+      return;
+    }
+    const boltKey = fxId && this.textures.exists(fxId) ? fxId : ensureMote(this);
+    for (const target of action.targets) {
+      const to = this.views.get(target.targetId);
+      if (to) {
+        this.spawnBolt(view, to, boltKey);
+      }
+    }
+  }
+
+  private showCastBar(view: SlotView, duration: number): void {
+    const y = view.rootY - view.displayH - 36;
+    const width = 72;
+    const bg = this.add.rectangle(view.rootX, y, width, 6, PALETTE.stroke).setDepth(49);
+    const fill = this.add
+      .rectangle(view.rootX - width / 2, y, width, 6, PALETTE.cyan)
+      .setOrigin(0, 0.5)
+      .setScale(0, 1)
+      .setDepth(50);
+    this.tweens.add({
+      targets: fill,
+      scaleX: 1,
+      duration,
+      ease: "Linear",
+      onComplete: () => {
+        bg.destroy();
+        fill.destroy();
+      },
+    });
+  }
+
+  private spawnShockwave(view: SlotView, textureKey: string): void {
+    const wave = this.add
+      .image(view.rootX, view.rootY - view.displayH * 0.42, textureKey)
+      .setDisplaySize(48, 48)
+      .setDepth(48)
+      .setAlpha(0.9);
+    this.tweens.add({
+      targets: wave,
+      displayWidth: 160,
+      displayHeight: 160,
+      alpha: 0,
+      duration: CAST_WINDUP_MS,
+      ease: "Quad.easeOut",
+      onComplete: () => wave.destroy(),
+    });
+  }
+
+  private spawnBolt(from: SlotView, to: SlotView, textureKey: string): void {
+    if (!this.textures.exists(textureKey)) {
+      return;
+    }
+    const shaped = textureKey !== ensureMote(this);
+    const bolt = this.add
+      .image(from.rootX, from.rootY - from.displayH * 0.45, textureKey)
+      .setDepth(48);
+    if (shaped) {
+      bolt.setDisplaySize(72, 72);
+    } else {
+      bolt.setBlendMode(Phaser.BlendModes.ADD).setScale(from.side === "ally" ? 1.15 : 1);
+      if (from.side === "enemy") {
+        bolt.setTint(0xff6a4a);
+      }
+    }
+    this.tweens.add({
+      targets: bolt,
+      x: to.rootX,
+      y: to.rootY - to.displayH * 0.42,
+      duration: CAST_WINDUP_MS,
+      ease: "Quad.easeIn",
+      onComplete: () => bolt.destroy(),
+    });
+  }
+
+  private spawnSlash(view: SlotView): void {
+    const g = this.add.graphics().setDepth(48);
+    const x = view.rootX;
+    const y = view.rootY - view.displayH * 0.48;
+    g.lineStyle(5, PALETTE.parchment, 0.95);
+    g.beginPath();
+    g.moveTo(x - 30, y - 16);
+    g.lineTo(x + 28, y + 18);
+    g.strokePath();
+    g.lineStyle(2, PALETTE.cyan, 0.8);
+    g.beginPath();
+    g.moveTo(x - 18, y + 10);
+    g.lineTo(x + 22, y - 14);
+    g.strokePath();
+    this.tweens.add({
+      targets: g,
+      alpha: 0,
+      duration: 180,
+      delay: 40,
+      onComplete: () => g.destroy(),
+    });
+  }
+
+  private impactTarget(action: ActionResult, target: TargetResult): void {
+    const view = this.views.get(target.targetId);
+    if (!view) {
+      return;
+    }
+    const unit = this.engine.units.find((item) => item.id === target.targetId);
+    const landed = target.segments.some((segment) => segment.trigger === "hit");
+    if (landed) {
+      this.flashHit(view);
+    }
+    if (action.isBasicAttack && landed) {
+      this.spawnSlash(view);
+    }
+    target.segments.forEach((segment, index) => {
+      if (segment.trigger === "skip") {
+        return;
+      }
+      if (segment.trigger === "miss") {
+        this.spawnFloater({
+          x: view.rootX,
+          y: view.rootY - view.displayH * 0.5 - index * 16,
+          text: "闪避",
+          color: COLORS.muted,
+          scale: 1,
+        });
+        return;
+      }
+      const parts = [String(segment.damage)];
+      if (segment.crit) {
+        parts.unshift("暴击");
+      }
+      if (segment.blocked) {
+        parts.push("格挡");
+      }
+      this.spawnFloater({
+        x: view.rootX,
+        y: view.rootY - view.displayH * 0.5 - index * 16,
+        text: parts.join(" "),
+        color: segment.crit ? "#ffb347" : "#fff6d8",
+        scale: segment.crit ? 1.25 : 1,
+      });
+    });
+    if (unit && !unit.alive) {
+      this.collapse(view);
+    }
+  }
+
+  private flashHit(view: SlotView): void {
+    if (!view.portrait) {
+      return;
+    }
+    view.portrait.setTintFill(0xfff4dc);
+    this.time.delayedCall(HIT_FLASH_MS, () => this.restorePortrait(view));
+  }
+
+  private restorePortrait(view: SlotView): void {
+    if (!view.portrait?.active) {
+      return;
+    }
+    if (view.baseTint != null) {
+      view.portrait.setTint(view.baseTint);
+      return;
+    }
+    view.portrait.clearTint();
+  }
+
+  private collapse(view: SlotView): void {
+    if (view.collapsed) {
+      return;
+    }
+    view.collapsed = true;
+    this.tweens.add({
+      targets: view.root,
+      alpha: 0,
+      scaleY: 0.15,
+      duration: 280,
+      ease: "Cubic.easeIn",
+    });
+  }
+
   private spawnFloater(floater: { x: number; y: number; text: string; color: string; scale: number }): void {
     const text = this.add
       .text(floater.x, floater.y, floater.text, {
         fontFamily: FONT,
         fontSize: `${Math.round(22 * floater.scale)}px`,
         color: floater.color,
+        stroke: "#0E1620",
+        strokeThickness: 3,
       })
       .setOrigin(0.5)
       .setDepth(55);
@@ -503,5 +670,4 @@ export class BattleScene extends Phaser.Scene {
   private leaveBattle(): void {
     this.scene.start(this.mode === "trial" ? "TrialSelect" : "Hub");
   }
-
 }

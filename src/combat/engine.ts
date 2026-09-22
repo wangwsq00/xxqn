@@ -9,7 +9,8 @@ import type {
   TargetResult,
 } from "./types";
 
-function compareReady(a: Combatant, b: Combatant): number {
+/** 同一帧多人满条时的出手顺序：速度高的优先，然后槽位 1–5，再我方优先。表现层叠头像也用这个顺序。 */
+export function compareReady(a: Combatant, b: Combatant): number {
   if (b.stats.spd !== a.stats.spd) {
     return b.stats.spd - a.stats.spd;
   }

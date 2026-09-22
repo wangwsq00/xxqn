@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { BACKDROP, BACKDROP_FILES } from "../assets/backdrops";
+import { preloadPresentation } from "../assets/presentation";
 import { mountBackdrop } from "../ui/chrome";
 import { preloadPortraits } from "../ui/portraitView";
 import { COLORS, FONT } from "../ui/theme";
@@ -12,6 +13,7 @@ export class BootScene extends Phaser.Scene {
   preload(): void {
     this.cameras.main.setBackgroundColor(COLORS.bg);
     preloadPortraits(this);
+    preloadPresentation(this);
     for (const file of BACKDROP_FILES) {
       this.load.image(file.key, file.path);
     }
