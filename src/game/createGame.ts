@@ -10,7 +10,7 @@ import { TrialSelectScene } from "../scenes/TrialSelectScene";
 import { GAME_HEIGHT, GAME_WIDTH } from "../ui/theme";
 
 export function createGame(parent: string | HTMLElement): Phaser.Game {
-  return new Phaser.Game({
+  const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
     width: GAME_WIDTH,
@@ -27,4 +27,8 @@ export function createGame(parent: string | HTMLElement): Phaser.Game {
     },
     scene: [BootScene, HubScene, GatheringScene, EquipScene, GongfaScene, PetScene, TrialSelectScene, BattleScene],
   });
+  if (import.meta.env.DEV) {
+    Object.assign(globalThis, { __xxqn: game });
+  }
+  return game;
 }

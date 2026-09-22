@@ -1,5 +1,7 @@
 # M1 立绘与界面资源
 
+洞府法阵、底栏图标、战斗无框站位和共用速度条见 [`M2_presentation.md`](M2_presentation.md)。下文仍是 M1 立绘与背景。
+
 第一批国漫立绘，替换战斗 / 洞府 / 灵宠色块。洞府视觉重建见 [`M1_visual_rebuild.md`](M1_visual_rebuild.md)。不改玩法数值。文件名**不要**用 rabbit / wolf。
 
 Phaser 在 `Boot.preload` 各 `load.image` 一次。战斗槽位立绘 **底中锚点**（origin `0.5, 1`），脚踩槽位坐标，不是色块中心。
@@ -59,7 +61,7 @@ UI 切图仍未入库。没有文件时用 Phaser 圆角矩形，规格对齐：
 - `src/assets/portraits.ts`：路径、键、显示名表
 - `src/ui/portraitView.ts`：preload / 底中或居中绘制
 - `src/scenes/BootScene.ts`：统一加载
-- `src/scenes/BattleScene.ts`：`drawSlot` 底中立绘；空位仍为淡色框
-- `src/scenes/HubScene.ts` / `PetScene.ts` / `TrialSelectScene.ts`：洞府大立绘、试炼海报、灵宠头像
+- `src/scenes/BattleScene.ts`：`drawSlot` 底中立绘。M2 起去掉立绘牌，空位只留淡地标，行动条改为共用速度条
+- `src/scenes/HubScene.ts` / `PetScene.ts` / `TrialSelectScene.ts`：洞府打坐场景、试炼海报、灵宠头像
 - `src/assets/backdrops.ts` / `src/ui/chrome.ts`：背景铺满与面板按钮
 - `src/scenes/BootScene.ts`：立绘与三张背景一起加载

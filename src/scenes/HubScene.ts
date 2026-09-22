@@ -7,6 +7,12 @@ import {
   HUB_PET_HEIGHT_RATIO,
   PORTRAIT,
 } from "../assets/portraits";
+import {
+  spiritArrayFx,
+  spiritArrayTextureKey,
+  spiritArrayTier,
+  UI_ICON,
+} from "../assets/presentation";
 import { accrueIdle, claimableAmounts, claimIdle, hasClaimable } from "../idle/settle";
 import { getPetDef } from "../pet/catalog";
 import { isPeakMinorLayer } from "../realm/costs";
@@ -14,16 +20,18 @@ import { cultivationProgressText, cultivationRatio } from "../realm/format";
 import { applyMinorLayerUps } from "../realm/upgrade";
 import { canChallengeHeartDemon, heartDemonHint } from "../realm/breakthrough";
 import { loadSave, persistSave, realmLabel, type SaveData } from "../save/storage";
-import { dockTop, makeButton, makeChip, mountBackdrop, tweenBar, type UiButton } from "../ui/chrome";
-import { addStandingPlate } from "../ui/portraitView";
-import { BODY_HEX, DOCK_HEIGHT, DOCK_HIT_HEIGHT, FONT, PALETTE, PARCHMENT_HEX } from "../ui/theme";
+import { dockTop, makeButton, mountBackdrop, tweenBar, type UiButton } from "../ui/chrome";
+import { heroAttributeLines } from "../ui/heroSheet";
+import { makeIconTab, type IconTab } from "../ui/iconDock";
+import { hasPortrait } from "../ui/portraitView";
+import { ensureFaceDisc, ensureMote, ensureSoftBody } from "../ui/softPortrait";
+import { BODY_HEX, DOCK_HEIGHT, DOCK_HIT_HEIGHT, FONT, GOLD_HEX, PALETTE, PARCHMENT_HEX } from "../ui/theme";
 
 const QI_BAR_W = 640;
 
 export class HubScene extends Phaser.Scene {
   private save!: SaveData;
   private realmText?: Phaser.GameObjects.Text;
-  private qiText?: Phaser.GameObjects.Text;
   private stoneText?: Phaser.GameObjects.Text;
   private progressText?: Phaser.GameObjects.Text;
   private breakthroughHint?: Phaser.GameObjects.Text;
@@ -34,9 +42,15 @@ export class HubScene extends Phaser.Scene {
   private demonBtn?: UiButton;
   private sheet?: Phaser.GameObjects.Container;
   private sheetOpen = false;
-  private dockHub?: UiButton;
-  private dockTrial?: UiButton;
-  private dockGrow?: UiButton;
+  private attrSheet?: Phaser.GameObjects.Container;
+  private attrOpen = false;
+  private attrRealm?: Phaser.GameObjects.Text;
+  private attrValues: Phaser.GameObjects.Text[] = [];
+  private dockHub?: IconTab;
+  private dockTrial?: IconTab;
+  private dockGrow?: IconTab;
+  private arraySpin?: Phaser.GameObjects.Image;
+  private arrayRotateMs = 18000;
   private onVisibility?: () => void;
 
   constructor() {
@@ -45,37 +59,24 @@ export class HubScene extends Phaser.Scene {
 
   create(): void {
     this.save = loadSave();
-    const { width } = this.scale;
-    mountBackdrop(this, BACKDROP.dongfu, { top: 200, bottom: 420, scrim: 0.78 });
-    this.drawFigures();
+    const { width, height } = this.scale;
+    mountBackdrop(this, BACKDROP.dongfu, { top: 180, bottom: 360, scrim: 0.72 });
+    this.drawMeditation();
+    this.drawLowerWash(width, height);
+    this.drawAvatarCard();
 
     this.add
-      .text(width / 2, 36, "修仙千年", {
-        fontFamily: FONT,
-        fontSize: "28px",
-        color: GOLD_COLOR,
-      })
-      .setOrigin(0.5)
-      .setDepth(30);
-
-    const chipY = 92;
-    const chipW = 208;
-    this.realmText = makeChip(this, width / 2 - (chipW + 12), chipY, chipW, 52, "");
-    this.qiText = makeChip(this, width / 2, chipY, chipW, 52, "");
-    this.stoneText = makeChip(this, width / 2 + (chipW + 12), chipY, chipW, 52, "");
-
-    this.add
-      .rectangle(width / 2, 150, QI_BAR_W, 16, PALETTE.stroke)
+      .rectangle(width / 2, 168, QI_BAR_W, 16, PALETTE.stroke)
       .setStrokeStyle(2, PALETTE.gold)
       .setDepth(30);
     this.qiBar = this.add
-      .rectangle(width / 2 - QI_BAR_W / 2, 150, QI_BAR_W, 12, PALETTE.cyan)
+      .rectangle(width / 2 - QI_BAR_W / 2, 168, QI_BAR_W, 12, PALETTE.cyan)
       .setOrigin(0, 0.5)
       .setDepth(31);
     this.qiBar.setScale(0, 1);
 
     this.progressText = this.add
-      .text(width / 2, 178, "", {
+      .text(width / 2, 196, "", {
         fontFamily: FONT,
         fontSize: "16px",
         color: PARCHMENT_HEX,
@@ -112,7 +113,7 @@ export class HubScene extends Phaser.Scene {
       .text(width / 2, 968, "", {
         fontFamily: FONT,
         fontSize: "18px",
-        color: GOLD_COLOR,
+        color: GOLD_HEX,
       })
       .setOrigin(0.5)
       .setDepth(40);
@@ -130,6 +131,7 @@ export class HubScene extends Phaser.Scene {
 
     this.buildDock();
     this.buildSheet();
+    this.buildAttributeSheet();
 
     this.refreshIdle();
     this.time.addEvent({
@@ -151,25 +153,150 @@ export class HubScene extends Phaser.Scene {
     });
   }
 
-  private drawFigures(): void {
-    const heroH = HUB_HERO_HEIGHT;
-    this.add
-      .ellipse(HUB_HERO_FEET_X, HUB_HERO_FEET_Y + 8, heroH * 0.7, 26, PALETTE.stroke, 0.4)
-      .setDepth(3);
-    addStandingPlate(this, HUB_HERO_FEET_X, HUB_HERO_FEET_Y, PORTRAIT.playerHero, heroH, {
-      depth: 8,
-      stroke: PALETTE.gold,
-    });
-
-    const pet = this.save.pets.equippedId ? getPetDef(this.save.pets.equippedId) : undefined;
-    if (!pet) {
+  update(_time: number, delta: number): void {
+    if (!this.arraySpin) {
       return;
     }
-    const petH = Math.round(heroH * HUB_PET_HEIGHT_RATIO);
-    addStandingPlate(this, HUB_HERO_FEET_X + 156, HUB_HERO_FEET_Y - 28, pet.portraitKey, petH, {
-      depth: 4,
-      stroke: PALETTE.cyan,
+    this.arraySpin.angle = (this.arraySpin.angle + (360 * delta) / this.arrayRotateMs) % 360;
+  }
+
+  private drawLowerWash(width: number, height: number): void {
+    const band = 300;
+    const top = height - DOCK_HEIGHT - band;
+    const steps = 10;
+    const slice = band / steps;
+    for (let i = 0; i < steps; i += 1) {
+      const alpha = 0.05 + (i / steps) * 0.62;
+      const y = top + slice * i + slice / 2;
+      this.add.rectangle(width / 2, y, width, slice + 1, PALETTE.ink, alpha).setDepth(20);
+    }
+  }
+
+  private drawMeditation(): void {
+    const tier = spiritArrayTier(this.save.player.gatheringArrayLevel, this.save.player.realmMajor);
+    const fx = spiritArrayFx(tier);
+    this.arrayRotateMs = fx.rotateMs;
+    const arraySize = 500 + tier * 36;
+    const feetX = HUB_HERO_FEET_X;
+    const feetY = HUB_HERO_FEET_Y;
+
+    this.add.ellipse(feetX, feetY + 16, arraySize * 0.86, 34, PALETTE.stroke, 0.38).setDepth(2);
+
+    const arrayKey = spiritArrayTextureKey(tier);
+    if (this.textures.exists(arrayKey)) {
+      this.arraySpin = this.add
+        .image(feetX, feetY, arrayKey)
+        .setDisplaySize(arraySize, arraySize)
+        .setDepth(3)
+        .setAlpha(fx.alphaMin);
+      this.tweens.add({
+        targets: this.arraySpin,
+        alpha: 1,
+        duration: 1400,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+    }
+
+    const glow = this.add
+      .circle(feetX, feetY - HUB_HERO_HEIGHT * 0.4, fx.glowRadius, PALETTE.cyan, fx.glowAlpha)
+      .setDepth(4)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({
+      targets: glow,
+      alpha: fx.glowAlpha * 0.4,
+      scale: 1.08,
+      duration: 1300,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
     });
+
+    const heroKey = ensureSoftBody(this, PORTRAIT.playerHero, HUB_HERO_HEIGHT);
+    if (heroKey) {
+      const heroRoot = this.add.container(feetX, feetY).setDepth(8);
+      heroRoot.add(this.add.image(0, 0, heroKey).setOrigin(0.5, 1));
+      this.tweens.add({
+        targets: heroRoot,
+        scaleX: 1.02,
+        scaleY: 1.02,
+        duration: 1700,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+    }
+
+    const pet = this.save.pets.equippedId ? getPetDef(this.save.pets.equippedId) : undefined;
+    if (pet && hasPortrait(this, pet.portraitKey)) {
+      const petH = Math.round(HUB_HERO_HEIGHT * HUB_PET_HEIGHT_RATIO);
+      const petKey = ensureSoftBody(this, pet.portraitKey, petH);
+      if (petKey) {
+        this.add
+          .image(feetX + 156, feetY - 28, petKey)
+          .setOrigin(0.5, 1)
+          .setDepth(5);
+      }
+    }
+
+    const mote = ensureMote(this);
+    if (this.textures.exists(mote)) {
+      this.add
+        .particles(feetX, feetY - 6, mote, {
+          x: { min: -60 - tier * 22, max: 60 + tier * 22 },
+          speedY: { min: -fx.moteSpeed * 1.25, max: -fx.moteSpeed * 0.75 },
+          speedX: { min: -16, max: 16 },
+          lifespan: { min: 680, max: 1080 },
+          frequency: fx.particleFrequency,
+          scale: { start: 0.28 + tier * 0.12, end: 0 },
+          alpha: { start: 0.9, end: 0 },
+          blendMode: Phaser.BlendModes.ADD,
+          tint: 0xd8fffb,
+        })
+        .setDepth(7);
+    }
+  }
+
+  private drawAvatarCard(): void {
+    const bg = this.add.graphics().setDepth(44);
+    bg.fillStyle(PALETTE.ink, 0.9);
+    bg.fillRoundedRect(16, 16, 400, 100, 28);
+    bg.lineStyle(2, PALETTE.gold, 1);
+    bg.strokeRoundedRect(17, 17, 398, 98, 27);
+
+    const faceKey = this.textures.exists(PORTRAIT.playerHero)
+      ? ensureFaceDisc(this, PORTRAIT.playerHero, 84)
+      : null;
+    if (faceKey && this.textures.exists(faceKey)) {
+      this.add.image(66, 66, faceKey).setDisplaySize(76, 76).setDepth(46);
+    }
+    const ring = this.add.graphics().setDepth(46);
+    ring.lineStyle(3, PALETTE.gold, 1);
+    ring.strokeCircle(66, 66, 39);
+
+    this.realmText = this.add
+      .text(118, 46, "", {
+        fontFamily: FONT,
+        fontSize: "24px",
+        color: BODY_HEX,
+      })
+      .setOrigin(0, 0.5)
+      .setDepth(46);
+    this.stoneText = this.add
+      .text(118, 82, "", {
+        fontFamily: FONT,
+        fontSize: "20px",
+        color: GOLD_HEX,
+      })
+      .setOrigin(0, 0.5)
+      .setDepth(46);
+
+    const hit = this.add
+      .rectangle(216, 66, 400, 100, PALETTE.ink, 0.001)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(47);
+    hit.on("pointerdown", () => this.onAvatar());
   }
 
   private buildDock(): void {
@@ -181,21 +308,32 @@ export class HubScene extends Phaser.Scene {
     bar.setInteractive();
     const y = height - DOCK_HEIGHT / 2;
     const hitW = Math.floor(width / 3) - 16;
-    this.dockHub = makeButton(this, width / 6, y, hitW, DOCK_HIT_HEIGHT, "洞府", () => this.closeSheet(), {
-      tone: "cinnabar",
-      fontSize: 30,
-      depth: 110,
-    });
-    this.dockTrial = makeButton(this, width / 2, y, hitW, DOCK_HIT_HEIGHT, "试炼", () => this.leaveFor("TrialSelect"), {
-      tone: "quiet",
-      fontSize: 30,
-      depth: 110,
-    });
-    this.dockGrow = makeButton(this, (width * 5) / 6, y, hitW, DOCK_HIT_HEIGHT, "养成", () => this.toggleSheet(), {
-      tone: "quiet",
-      fontSize: 30,
-      depth: 110,
-    });
+    this.dockHub = makeIconTab(this, width / 6, y, hitW, DOCK_HIT_HEIGHT, "洞府", UI_ICON.dongfu, () => {
+      this.closeSheet();
+      this.closeAttributes();
+    }, { tone: "cinnabar", depth: 110 });
+    this.dockTrial = makeIconTab(
+      this,
+      width / 2,
+      y,
+      hitW,
+      DOCK_HIT_HEIGHT,
+      "试炼",
+      UI_ICON.trial,
+      () => this.leaveFor("TrialSelect"),
+      { tone: "quiet", depth: 110 },
+    );
+    this.dockGrow = makeIconTab(
+      this,
+      (width * 5) / 6,
+      y,
+      hitW,
+      DOCK_HIT_HEIGHT,
+      "养成",
+      UI_ICON.growth,
+      () => this.toggleSheet(),
+      { tone: "quiet", depth: 110 },
+    );
   }
 
   private buildSheet(): void {
@@ -240,7 +378,122 @@ export class HubScene extends Phaser.Scene {
     this.sheet = sheet;
   }
 
+  private buildAttributeSheet(): void {
+    const { width, height } = this.scale;
+    const sheet = this.add.container(0, 0).setDepth(90).setVisible(false);
+    const dimH = height - DOCK_HEIGHT;
+    const dim = this.add
+      .rectangle(width / 2, dimH / 2, width, dimH, PALETTE.ink, 0.55)
+      .setInteractive();
+    dim.on("pointerdown", () => this.closeAttributes());
+    const panelH = 620;
+    const panelBottom = dockTop(this) - 12;
+    const panelY = panelBottom - panelH / 2;
+    const panel = this.add
+      .rectangle(width / 2, panelY, 660, panelH, PALETTE.ink, 0.96)
+      .setStrokeStyle(2, PALETTE.gold)
+      .setInteractive();
+    const title = this.add
+      .text(width / 2, panelY - panelH / 2 + 48, "详细属性", {
+        fontFamily: FONT,
+        fontSize: "32px",
+        color: BODY_HEX,
+      })
+      .setOrigin(0.5);
+    this.attrRealm = this.add
+      .text(width / 2, panelY - panelH / 2 + 92, "", {
+        fontFamily: FONT,
+        fontSize: "18px",
+        color: PARCHMENT_HEX,
+      })
+      .setOrigin(0.5);
+    sheet.add([dim, panel, title, this.attrRealm]);
+
+    const lines = heroAttributeLines(this.save);
+    lines.forEach((line, index) => {
+      const col = index < 5 ? 0 : 1;
+      const row = index % 5;
+      const x = width / 2 - 270 + col * 300;
+      const y = panelY - 150 + row * 72;
+      const label = this.add
+        .text(x, y, line.label, {
+          fontFamily: FONT,
+          fontSize: "22px",
+          color: PARCHMENT_HEX,
+        })
+        .setOrigin(0, 0.5);
+      const value = this.add
+        .text(x + 130, y, line.value, {
+          fontFamily: FONT,
+          fontSize: "26px",
+          color: GOLD_HEX,
+        })
+        .setOrigin(0, 0.5);
+      this.attrValues.push(value);
+      sheet.add([label, value]);
+    });
+
+    const close = makeButton(this, width / 2, panelY + panelH / 2 - 64, 240, 72, "关闭", () => this.closeAttributes(), {
+      tone: "cinnabar",
+      fontSize: 26,
+      depth: 92,
+    });
+    sheet.add(close.root);
+    this.attrSheet = sheet;
+  }
+
+  private onAvatar(): void {
+    if (this.attrOpen) {
+      this.closeAttributes();
+      return;
+    }
+    this.openAttributes();
+  }
+
+  private openAttributes(): void {
+    this.closeSheet();
+    if (!this.attrSheet) {
+      return;
+    }
+    this.paintAttributes();
+    this.attrOpen = true;
+    this.tweens.killTweensOf(this.attrSheet);
+    this.attrSheet.setVisible(true).setAlpha(0);
+    this.tweens.add({ targets: this.attrSheet, alpha: 1, duration: 160, ease: "Quad.easeOut" });
+  }
+
+  private closeAttributes(): void {
+    const wasOpen = this.attrOpen;
+    this.attrOpen = false;
+    const sheet = this.attrSheet;
+    if (!sheet || !wasOpen) {
+      return;
+    }
+    this.tweens.killTweensOf(sheet);
+    this.tweens.add({
+      targets: sheet,
+      alpha: 0,
+      duration: 120,
+      ease: "Quad.easeOut",
+      onComplete: () => {
+        if (!this.attrOpen) {
+          sheet.setVisible(false);
+        }
+      },
+    });
+  }
+
+  private paintAttributes(): void {
+    const lines = heroAttributeLines(this.save);
+    lines.forEach((line, index) => {
+      this.attrValues[index]?.setText(line.value);
+    });
+    const { realmMajor, realmLayer } = this.save.player;
+    this.attrRealm?.setText(realmLabel(realmMajor, realmLayer));
+  }
+
   private toggleSheet(): void {
+    this.closeAttributes();
     if (this.sheetOpen) {
       this.closeSheet();
       return;
@@ -306,16 +559,16 @@ export class HubScene extends Phaser.Scene {
     const { realmMajor, realmLayer, lingqi, stones } = this.save.player;
     const pending = claimableAmounts(this.save);
     this.realmText?.setText(realmLabel(realmMajor, realmLayer));
-    this.qiText?.setText(`灵气 ${Math.floor(lingqi)}`);
     this.stoneText?.setText(`灵石 ${Math.floor(stones)}`);
     this.progressText?.setText(cultivationProgressText(realmMajor, realmLayer, lingqi));
     if (this.qiBar) {
       tweenBar(this, this.qiBar, cultivationRatio(realmMajor, realmLayer, lingqi), 180);
     }
+    this.paintAttributes();
 
     const demonReady = canChallengeHeartDemon(this.save);
     this.breakthroughHint?.setText(heartDemonHint(this.save));
-    this.breakthroughHint?.setColor(demonReady ? GOLD_COLOR : PARCHMENT_HEX);
+    this.breakthroughHint?.setColor(demonReady ? GOLD_HEX : PARCHMENT_HEX);
     this.demonBtn?.setTone(demonReady ? "gold" : "quiet");
 
     this.pendingText?.setText(
@@ -342,7 +595,7 @@ export class HubScene extends Phaser.Scene {
           `修为提升：${realmLabel(cultivated.fromMajor, cultivated.fromLayer)} → ${realmLabel(cultivated.toMajor, cultivated.toLayer)}`,
         );
       }
-      this.claimHint?.setColor(CYAN_COLOR);
+      this.claimHint?.setColor(CYAN_HEX);
       this.claimHint?.setText(lines.join("\n"));
     } else {
       this.claimHint?.setColor(PARCHMENT_HEX);
@@ -370,5 +623,4 @@ export class HubScene extends Phaser.Scene {
   }
 }
 
-const GOLD_COLOR = "#C9A227";
-const CYAN_COLOR = "#3AA8A0";
+const CYAN_HEX = "#3AA8A0";
